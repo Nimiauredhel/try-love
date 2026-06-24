@@ -182,18 +182,11 @@ function draw_raycast()
 					rx = player_x + xoff * dist
 					ry = player_y + yoff * dist
 
-					corr_angle = player_angle - ray_angle
-					if (corr_angle < 0) then
-						corr_angle = corr_angle + tau
-					elseif (corr_angle > tau) then
-						corr_angle = corr_angle - tau
-					end
-
 					mod = 1.0 - (dist/dist_max)
 
 					if (mod < 0.0) then
 						mod = 0.0
-					else mod = mod * math.cos(corr_angle) end
+					end
 
 					color_mod = 0.25 * mod
 					love.graphics.setColor(color_mod, 0.25 + color_mod, color_mod)
