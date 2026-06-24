@@ -44,7 +44,6 @@ function love.load()
 	player_angle = 0.0
 	player_bounds = 0.2
 
-	dist_max = 8
 	fov = 50.0
 
 	minimap_scale = 0.25
@@ -79,20 +78,20 @@ function draw_map()
 	scale = minimap_scale
 	for map_x=1, map_w do
 		for map_y=1, map_h do
-		cell = coord_to_cell(map_x, map_y)
-		if map[cell] == 1 then
-			love.graphics.setColor(0.7, 0.7, 0.7)
-		else
+			cell = coord_to_cell(map_x, map_y)
+			win_x, win_y = map_to_window(map_x, map_y)
 			love.graphics.setColor(0.2, 0.2, 0.2)
-		end
-		win_x, win_y = map_to_window(map_x, map_y)
-		love.graphics.rectangle("line", win_x*scale+x, win_y*scale+y, tile_w*scale, tile_h*scale)
+			if map[cell] == 1 then
+				love.graphics.rectangle("fill", win_x*scale+x, win_y*scale+y, tile_w*scale, tile_h*scale)
+			else
+				love.graphics.rectangle("line", win_x*scale+x, win_y*scale+y, tile_w*scale, tile_h*scale)
+			end
 		end
 	end
 
 	win_x, win_y = map_to_window(player_x, player_y)
-	love.graphics.setColor(0.2, 0.8, 0.2)
-	love.graphics.line(win_x*scale+x, win_y*scale+y, win_x*scale+(pdx*tile_w*scale)+x, win_y*scale+(pdy*tile_h*scale)+y)
+	love.graphics.setColor(1.0, 1.0, 1.0)
+	love.graphics.line(win_x*scale+x, win_y*scale+y, win_x*scale+(pdx*2.0*tile_w*scale)+x, win_y*scale+(pdy*2.0*tile_h*scale)+y)
 	win_x = win_x - tile_w/2
 	win_y = win_y - tile_h/2
 	love.graphics.setColor(0.8, 0.2, 0.2)
@@ -104,7 +103,7 @@ function draw_raycast()
 	pwx, pwy = map_to_window(player_x, player_y)
 	pwx, pwy = pwx*minimap_scale + minimap_x, pwy*minimap_scale+minimap_y
 	dof_max = 32
-	ray_count = win_w * 2
+	ray_count = win_w
         cone = (fov / 360.0) * tau * (win_w/win_h)
 	local ray_inc = cone / ray_count
 	local ray_angle = player_angle - cone/2
@@ -179,10 +178,12 @@ function draw_raycast()
 						dist = y_side - y_delta
 					end
 
+					if (dist < 0.001) then dist = 0.001 end
+
 					rx = player_x + xoff * dist
 					ry = player_y + yoff * dist
 
-					mod = 1.0 - (dist/dist_max)
+					mod = 1.0 - (dist/10)
 
 					if (mod < 0.0) then
 						mod = 0.0
