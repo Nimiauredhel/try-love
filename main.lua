@@ -38,9 +38,11 @@ function love.load()
 	update_scale()
 	view_mode = 0
 	draw_mode = 0
+
 	player_x, player_y = map_w/2, map_h/2
 	player_dir = 0
 	player_angle = 0.0
+	player_bounds = 0.2
 
 	dist_max = 8
 	fov = 50.0
@@ -242,8 +244,12 @@ function move_player(dir)
 	end
 
 	player_x, player_y = player_x + move_x, player_y + move_y
-	if (player_x > map_w-1) or (player_x < 2) or (player_y > map_h-1) or (player_y < 2)
-		or map[coord_to_cell(player_x, player_y)] == 1 then
+	if (player_x > map_w-1) or (player_x < 1) or (player_y > map_h-1) or (player_y < 1)
+		or map[coord_to_cell(player_x+player_bounds, player_y+player_bounds)] == 1
+		or map[coord_to_cell(player_x-player_bounds, player_y+player_bounds)] == 1
+		or map[coord_to_cell(player_x+player_bounds, player_y-player_bounds)] == 1
+		or map[coord_to_cell(player_x-player_bounds, player_y-player_bounds)] == 1
+		then
 		player_x, player_y = player_x - move_x, player_y - move_y
 		move_speed = move_speed_min
 	end
