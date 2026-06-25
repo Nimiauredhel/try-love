@@ -1,22 +1,22 @@
 function load_map()
 	map_w, map_h = 16, 16
 	map = {
-		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-		1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-		1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-		1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-		1, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-		1, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0, 2, 2, 0, 1,
-		1, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0, 2, 2, 0, 1,
-		1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 1,
-		1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 1,
-		1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 1,
-		1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 1,
-		1, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 0, 1,
-		1, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 0, 1,
-		1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-		1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+		4, 4, 4, 4, 4, 4, 7, 7, 4, 5, 8, 4, 4, 4, 4, 4,
+		6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6,
+		4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4,
+		6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6,
+		4, 0, 0, 1, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4,
+		6, 0, 0, 2, 1, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 6,
+		4, 0, 0, 1, 2, 3, 0, 0, 0, 0, 0, 0, 1, 1, 0, 4,
+		4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 1, 0, 4,
+		4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 1, 0, 4,
+		4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 4,
+		8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 4,
+		5, 0, 0, 0, 0, 0, 0, 0, 1, 3, 3, 1, 1, 1, 0, 4,
+		4, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 4,
+		4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4,
+		4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4,
+		4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
 	}
 end
 
@@ -27,9 +27,15 @@ function update_scale()
 end
 
 function love.load()
-	wall01 = love.graphics.newImage("Brick04.png", nil)
-	wall02 = love.graphics.newImage("Brick01.png", nil)
-	walltextures = { wall01, wall02 }
+	wall01 = love.graphics.newImage("Brick01.png", nil)
+	wall02 = love.graphics.newImage("Brick02.png", nil)
+	wall03 = love.graphics.newImage("Brick03.png", nil)
+	wall04 = love.graphics.newImage("Brick04.png", nil)
+	wall05 = love.graphics.newImage("Brick05.png", nil)
+	wall06 = love.graphics.newImage("Brick06.png", nil)
+	wall07 = love.graphics.newImage("Brick07.png", nil)
+	wall08 = love.graphics.newImage("Brick08.png", nil)
+	walltextures = { wall01, wall02, wall03, wall04, wall05, wall06, wall07, wall08 }
 	wallquads = { }
 	for i = 1, 64 do
 		quad = love.graphics.newQuad(i, 0, 1, 64, 64, 64 )
@@ -111,7 +117,7 @@ function draw_raycast()
 	pwx, pwy = map_to_window(player_x, player_y)
 	pwx, pwy = pwx*minimap_scale + minimap_x, pwy*minimap_scale+minimap_y
 	dof_max = 32
-	ray_count = 1920
+	ray_count = win_w
         cone = (fov / 360.0) * tau * (win_w/win_h)
 	local ray_inc = cone / ray_count
 	local ray_angle = player_angle - cone/2
