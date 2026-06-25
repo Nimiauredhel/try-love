@@ -214,9 +214,11 @@ function draw_raycast()
 						mod = 0.0
 					end
 
-					color_mod = 0.25 * mod
+					r_mod = 0.4 * mod
+					g_mod = 0.3 * mod
+					b_mod = 0.1 * mod
 					--love.graphics.setColor(color_mod, 0.25 + color_mod, color_mod)
-					love.graphics.setColor(0.75 + color_mod, 0.75 + color_mod, 0.75 + color_mod)
+					love.graphics.setColor(0.5 + r_mod, 0.6 + g_mod, 0.8 + b_mod)
 					s_h = (win_h / dist)
 					start_x = s_w * (ray-1)
 					--love.graphics.rectangle("fill", start_x, hor_h-(s_h*0.5), s_w, s_h)
