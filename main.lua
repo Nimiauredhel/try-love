@@ -238,7 +238,7 @@ function move_player(dir)
 	end
 
 	player_x, player_y = player_x + move_x, player_y + move_y
-	if (player_x > map_w-1) or (player_x < 1) or (player_y > map_h-1) or (player_y < 1)
+	if (player_x > map_w) or (player_x < 0) or (player_y > map_h) or (player_y < 0)
 		or map[coord_to_cell(player_x+player_bounds, player_y+player_bounds)] == 1
 		or map[coord_to_cell(player_x-player_bounds, player_y+player_bounds)] == 1
 		or map[coord_to_cell(player_x+player_bounds, player_y-player_bounds)] == 1
