@@ -43,6 +43,8 @@ MinimapOffsetY = WindowHeight * 0.025
 -- Assets --
 WallTextures = { }
 WallQuads = { }
+CharSheets = { }
+CharQuads = { }
 
 local function load_map()
 	MapWidth, MapHeight = 16, 16
@@ -107,6 +109,13 @@ function love.load()
     -- define wall vertical strips as list of quads
 	for i = 1, 64 do
 		table.insert(WallQuads, love.graphics.newQuad(i, 0, 1, 64, 64, 64 ))
+	end
+
+	table.insert(CharSheets, love.graphics.newImage("gorksprite.png", nil))
+	for i = 1, 4 do
+        for j = 1, 4 do
+            table.insert(CharQuads, love.graphics.newQuad(16*i, 16*j, 16, 16, 64, 64 ))
+        end
 	end
 end
 
@@ -359,11 +368,16 @@ local function draw_raycast(ray_hits, hit_count)
 		love.graphics.draw(WallTextures[ray_hits[i].type], WallQuads[math.floor(ray_hits[i].side_px)], start_x, hor_h-(s_h*0.5), 0, s_w, s_h/64, 0, 0, 0, 0 )
 	end
 end
+spr = 1
 
 function love.draw()
 	local ray_hits, hit_count = gather_raycast()
 	draw_raycast(ray_hits, hit_count)
 	draw_map(ray_hits, hit_count)
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.draw(CharSheets[1], CharQuads[math.floor(spr)], 100, 100, 0, 10, 10, 0, 0, 0, 0 )
+    spr = spr + 0.1
+    if spr > 16 then spr = 1 end
 end
 
 function love.keypressed(key, scancode, isrepeat)
