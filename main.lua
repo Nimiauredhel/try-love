@@ -58,7 +58,7 @@ function love.load()
 	player_angle = 0.0
 	player_bounds = 0.2
 
-	fov = 30.0
+	fov = 55.0
 
 	minimap_scale = 0.25
 	minimap_x = win_w * 0.025
@@ -112,26 +112,19 @@ function draw_map()
 	love.graphics.rectangle("fill", win_x*scale+x, win_y*scale+y, tile_w*scale, tile_h*scale)
 end
 
-function draw_raycast()
-	hor_h = win_h * 0.4
-	pwx, pwy = map_to_window(player_x, player_y)
-	pwx, pwy = pwx*minimap_scale + minimap_x, pwy*minimap_scale+minimap_y
+function gather_raycast()
 	dof_max = 32
 	ray_count = win_w
         cone = (fov / 360.0) * tau * (win_w/win_h)
 	local ray_inc = cone / ray_count
 	local ray_angle = player_angle - cone/2
-	local side_px = 1
 
-	love.graphics.setColor(0.5, 0.5, 0.5)
-	love.graphics.rectangle("fill", 0, 0, win_w, hor_h)
-	love.graphics.setColor(0.25, 0.25, 0.25)
-	love.graphics.rectangle("fill", 0, hor_h, win_w, win_h)
-        s_w = win_w/ray_count
+	if (draw_mode > 0) then
+		ray_count = math.fmod(runtime*draw_mode*(win_w / 100), ray_count)
+	end
 
-    if (draw_mode > 0) then
-        ray_count = math.fmod(runtime*draw_mode*(win_w / 100), ray_count)
-    end
+	local hit_count = 0
+	local ray_hits = { }
 
 	for ray=1, ray_count do
 		if (ray_angle < 0.0) then ray_angle = ray_angle + tau
@@ -208,49 +201,60 @@ function draw_raycast()
 					wall_x = wall_x - math.floor(wall_x)
 					side_px = 1+wall_x * 64
 
-					mod = 1.0 - (dist/10)
-
-					if (mod < 0.0) then
-						mod = 0.0
-					end
-
-					r_mod = 0.4 * mod
-					g_mod = 0.3 * mod
-					b_mod = 0.1 * mod
-					--love.graphics.setColor(color_mod, 0.25 + color_mod, color_mod)
-					love.graphics.setColor(0.5 + r_mod, 0.6 + g_mod, 0.8 + b_mod)
-					s_h = (win_h / dist)
-					start_x = s_w * (ray-1)
-					--love.graphics.rectangle("fill", start_x, hor_h-(s_h*0.5), s_w, s_h)
-					love.graphics.draw(walltextures[hit], wallquads[math.floor(side_px)], start_x, hor_h-(s_h*0.5), 0, s_w, s_h/64, 0, 0, 0, 0 )
-					--side_px = side_px + 1
-					--if (side_px > 64) then side_px = 1 end
--- minimap rays
-					wx, wy = map_to_window(rx, ry)
-					wx, wy = wx*minimap_scale + minimap_x, wy*minimap_scale + minimap_y
-					love.graphics.setColor(1.0, 0.0, 0.0)
-					love.graphics.line(pwx, pwy, wx, wy)
-					love.graphics.setColor(0.0, 1.0, 0.0)
-					wx, wy = map_to_window(tx, ty)
-					wx, wy = wx*minimap_scale + minimap_x, wy*minimap_scale + minimap_y
-					love.graphics.rectangle("line", wx, wy, tile_w*minimap_scale, tile_h*minimap_scale)
+					local hit_data = { index = ray, type = hit, rx = rx, ry = ry, tx = tx, ty = ty, dist = dist, side_px = side_px }
+					table.insert(ray_hits, hit_data)
+					hit_count = hit_count + 1
 				end
-			else
-					dof = dof_max
-			end
-			if (hit == 0 and dof == dof_max and top_down) then
-				wx, wy = map_to_window(rx, ry)
-				wx, wy = wx*minimap_scale + minimap_x, wy*minimap_scale + minimap_y
-				love.graphics.setColor(0.2, 0.2, 1.0)
-				love.graphics.line(pwx, pwy, wx, wy)
 			end
 		end
 	ray_angle = ray_angle + ray_inc
 	end
+	return ray_hits, hit_count
+end
+
+function draw_raycast(ray_hits, hit_count)
+	hor_h = win_h * 0.4
+	pwx, pwy = map_to_window(player_x, player_y)
+	pwx, pwy = pwx*minimap_scale + minimap_x, pwy*minimap_scale+minimap_y
+
+	love.graphics.setColor(0.5, 0.5, 0.5)
+	love.graphics.rectangle("fill", 0, 0, win_w, hor_h)
+	love.graphics.setColor(0.25, 0.25, 0.25)
+	love.graphics.rectangle("fill", 0, hor_h, win_w, win_h)
+        s_w = win_w/ray_count
+
+	for i = 1, hit_count do
+		mod = 1.0 - (ray_hits[i].dist/10)
+
+		if (mod < 0.0) then
+			mod = 0.0
+		end
+
+		r_mod = 0.4 * mod
+		g_mod = 0.3 * mod
+		b_mod = 0.1 * mod
+		love.graphics.setColor(0.5 + r_mod, 0.6 + g_mod, 0.8 + b_mod)
+		s_h = (win_h / ray_hits[i].dist)
+		start_x = s_w * (ray_hits[i].index-1)
+		--love.graphics.rectangle("fill", start_x, hor_h-(s_h*0.5), s_w, s_h)
+		love.graphics.draw(walltextures[ray_hits[i].type], wallquads[math.floor(ray_hits[i].side_px)], start_x, hor_h-(s_h*0.5), 0, s_w, s_h/64, 0, 0, 0, 0 )
+
+-- minimap rays
+		wx, wy = map_to_window(ray_hits[i].rx, ray_hits[i].ry)
+		wx, wy = wx*minimap_scale + minimap_x, wy*minimap_scale + minimap_y
+		love.graphics.setColor(1.0, 0.0, 0.0)
+		love.graphics.line(pwx, pwy, wx, wy)
+		love.graphics.setColor(0.0, 1.0, 0.0)
+		wx, wy = map_to_window(ray_hits[i].tx, ray_hits[i].ty)
+		wx, wy = wx*minimap_scale + minimap_x, wy*minimap_scale + minimap_y
+		love.graphics.rectangle("line", wx, wy, tile_w*minimap_scale, tile_h*minimap_scale)
+	end
+
 end
 
 function love.draw()
-	draw_raycast()
+	ray_hits, hit_count = gather_raycast()
+	draw_raycast(ray_hits, hit_count)
 	draw_map()
 end
 
