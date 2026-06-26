@@ -1,6 +1,50 @@
-function load_map()
-	map_w, map_h = 16, 16
-	map = {
+-- Constants --
+Pi = 3.14159
+Tau = 6.283185
+
+-- Time --
+Runtime = 0
+
+-- Window --
+WindowWidth, WindowHeight = 1920, 1080
+
+-- Map --
+MapWidth, MapHeight = 16, 16
+MapCells = {}
+
+TileWidth = WindowWidth / MapWidth
+TileHeight = TileWidth
+
+-- Player --
+PlayerX, PlayerY = MapWidth/2, MapHeight/2
+PlayerAngle = 0.0
+PlayerBounds = 0.2
+PlayerDirX = 1.0
+PlayerDirY = 0.0
+
+MoveSpeedMin = 0.1
+MoveSpeedMax = 0.75
+MoveSpeedCurrent = MoveSpeedMin
+MoveDirection = 0
+
+-- Drawing --
+FieldOfView = 55.0
+RayCount = WindowWidth
+ViewMode = 0
+DrawMode = 0
+
+-- Minimap --
+MinimapScale = 0.25
+MinimapOffsetX = WindowWidth * 0.025
+MinimapOffsetY = WindowHeight * 0.025
+
+-- Assets --
+WallTextures = { }
+WallQuads = { }
+
+local function load_map()
+	MapWidth, MapHeight = 16, 16
+	MapCells = {
 		4, 4, 4, 4, 4, 4, 7, 7, 4, 5, 8, 4, 4, 4, 4, 4,
 		6, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 4, 0, 0, 0, 6,
 		4, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 4, 0, 0, 0, 4,
@@ -20,130 +64,135 @@ function load_map()
 	}
 end
 
-function update_scale()
-	win_w, win_h = love.graphics.getDimensions()
-	tile_w = win_w / map_w
-	tile_h = tile_w
+local function update_scale()
+	WindowWidth, WindowHeight = love.graphics.getDimensions()
+	TileWidth = WindowWidth / MapWidth
+	TileHeight = TileWidth
+    RayCount = WindowWidth
 end
 
 function love.load()
-	wall01 = love.graphics.newImage("Brick01.png", nil)
-	wall02 = love.graphics.newImage("Brick02.png", nil)
-	wall03 = love.graphics.newImage("Brick03.png", nil)
-	wall04 = love.graphics.newImage("Brick04.png", nil)
-	wall05 = love.graphics.newImage("Brick05.png", nil)
-	wall06 = love.graphics.newImage("Brick06.png", nil)
-	wall07 = love.graphics.newImage("Brick07.png", nil)
-	wall08 = love.graphics.newImage("Brick08.png", nil)
-	walltextures = { wall01, wall02, wall03, wall04, wall05, wall06, wall07, wall08 }
-	wallquads = { }
-	for i = 1, 64 do
-		quad = love.graphics.newQuad(i, 0, 1, 64, 64, 64 )
-		table.insert(wallquads, quad)
-	end
-    runtime = 0
-	pi = 3.14159
-	tau = 6.283185
-	love.keyboard.setKeyRepeat(true)
-	move_speed_min = 0.1
-	move_speed_max = 0.75
-	move_speed = move_speed_min
+    Runtime = 0
+	MoveSpeedMin = 0.1
+	MoveSpeedMax = 0.75
+	MoveSpeedCurrent = MoveSpeedMin
 	load_map()
 	update_scale()
-	view_mode = 0
-	draw_mode = 0
+	ViewMode = 0
+	DrawMode = 0
 
-	player_x, player_y = map_w/2, map_h/2
-	player_dir = 0
-	player_angle = 0.0
-	player_bounds = 0.2
+	PlayerX, PlayerY = MapWidth/2, MapHeight/2
+	MoveDirection = 0
+	PlayerAngle = 0.0
+	PlayerBounds = 0.2
 
-	fov = 55.0
+	FieldOfView = 55.0
 
-	minimap_scale = 0.25
-	minimap_x = win_w * 0.025
-	minimap_y = win_h * 0.025
+	MinimapScale = 0.25
+	MinimapOffsetX = WindowWidth * 0.025
+	MinimapOffsetY = WindowHeight * 0.025
+
+	love.keyboard.setKeyRepeat(true)
+
+    -- load wall textures
+	table.insert(WallTextures, love.graphics.newImage("Brick01.png", nil))
+	table.insert(WallTextures, love.graphics.newImage("Brick02.png", nil))
+	table.insert(WallTextures, love.graphics.newImage("Brick03.png", nil))
+	table.insert(WallTextures, love.graphics.newImage("Brick04.png", nil))
+	table.insert(WallTextures, love.graphics.newImage("Brick05.png", nil))
+	table.insert(WallTextures, love.graphics.newImage("Brick06.png", nil))
+	table.insert(WallTextures, love.graphics.newImage("Brick07.png", nil))
+	table.insert(WallTextures, love.graphics.newImage("Brick08.png", nil))
+    -- define wall vertical strips as list of quads
+	for i = 1, 64 do
+		table.insert(WallQuads, love.graphics.newQuad(i, 0, 1, 64, 64, 64 ))
+	end
 end
 
-function map_to_window(in_x, in_y)
-	win_x = tile_w * (in_x-1)
-	win_y = tile_h * (in_y-1)
+local function map_to_window(in_x, in_y)
+	local win_x = TileWidth * (in_x-1)
+	local win_y = TileHeight * (in_y-1)
 	return win_x, win_y
 end
 
-function coord_to_cell(map_x, map_y)
-	fmap_x, fmap_y = math.floor(map_x), math.floor(map_y)
-	cell = ((fmap_y-1)*map_w)+fmap_x
+local function coord_to_cell(map_x, map_y)
+	local fmap_x, fmap_y = math.floor(map_x), math.floor(map_y)
+	local cell = ((fmap_y-1)*MapWidth)+fmap_x
 	return cell
 end
 
 function love.update(dt)
-	runtime = runtime + dt
+	Runtime = Runtime + dt
 	update_scale()
-	pdx = math.cos(player_angle)
-	pdy = math.sin(player_angle)
-	move_speed = move_speed - move_speed_min
-	if (move_speed < move_speed_min) then move_speed = move_speed_min end
+	PlayerDirX = math.cos(PlayerAngle)
+	PlayerDirY = math.sin(PlayerAngle)
+	MoveSpeedCurrent = MoveSpeedCurrent - MoveSpeedMin
+	if (MoveSpeedCurrent < MoveSpeedMin) then MoveSpeedCurrent = MoveSpeedMin end
 end
 
-function draw_map(ray_hits, hit_count)
-	x = minimap_x
-	y = minimap_y
-	scale = minimap_scale
+local function draw_map(ray_hits, hit_count)
+	local x = MinimapOffsetX
+	local y = MinimapOffsetY
+	local scale = MinimapScale
+
+	local pwx, pwy = map_to_window(PlayerX, PlayerY)
+	pwx, pwy = pwx*scale+x, pwy*scale+y
+
 	love.graphics.setColor(0.0, 0.0, 0.0)
-	for map_x=1, map_w do
-		for map_y=1, map_h do
-			cell = coord_to_cell(map_x, map_y)
-			win_x, win_y = map_to_window(map_x, map_y)
-			if map[cell] > 0 then
-				love.graphics.rectangle("fill", win_x*scale+x, win_y*scale+y, tile_w*scale, tile_h*scale)
+	for map_x=1, MapWidth do
+		for map_y=1, MapHeight do
+			local cell = coord_to_cell(map_x, map_y)
+			local win_x, win_y = map_to_window(map_x, map_y)
+			if MapCells[cell] > 0 then
+				love.graphics.rectangle("fill", win_x*scale+x, win_y*scale+y, TileWidth*scale, TileHeight*scale)
 			end
 		end
 	end
 
-	win_x, win_y = map_to_window(player_x, player_y)
+	local win_x, win_y = map_to_window(PlayerX, PlayerY)
 	love.graphics.setColor(1.0, 1.0, 1.0)
-	love.graphics.line(win_x*scale+x, win_y*scale+y, win_x*scale+(pdx*2.0*tile_w*scale)+x, win_y*scale+(pdy*2.0*tile_h*scale)+y)
-	win_x = win_x - tile_w/2
-	win_y = win_y - tile_h/2
+	love.graphics.line(win_x*scale+x, win_y*scale+y, win_x*scale+(PlayerDirX*2.0*TileWidth*scale)+x, win_y*scale+(PlayerDirY*2.0*TileHeight*scale)+y)
+	win_x = win_x - TileWidth/2
+	win_y = win_y - TileHeight/2
 	love.graphics.setColor(0.8, 0.2, 0.2)
-	love.graphics.rectangle("fill", win_x*scale+x, win_y*scale+y, tile_w*scale, tile_h*scale)
+	love.graphics.rectangle("fill", win_x*scale+x, win_y*scale+y, TileWidth*scale, TileHeight*scale)
 
 	for i = 1, hit_count do
-		wx, wy = map_to_window(ray_hits[i].rx, ray_hits[i].ry)
-		wx, wy = wx*minimap_scale + minimap_x, wy*minimap_scale + minimap_y
+		win_x, win_y = map_to_window(ray_hits[i].rx, ray_hits[i].ry)
+		win_x, win_y = win_x*MinimapScale + MinimapOffsetX, win_y*MinimapScale + MinimapOffsetY
 		love.graphics.setColor(1.0, 0.0, 0.0)
-		love.graphics.line(pwx, pwy, wx, wy)
+		love.graphics.line(pwx, pwy, win_x, win_y)
 		love.graphics.setColor(0.0, 1.0, 0.0)
-		wx, wy = map_to_window(ray_hits[i].tx, ray_hits[i].ty)
-		wx, wy = wx*minimap_scale + minimap_x, wy*minimap_scale + minimap_y
-		love.graphics.rectangle("line", wx, wy, tile_w*minimap_scale, tile_h*minimap_scale)
+		win_x, win_y = map_to_window(ray_hits[i].tx, ray_hits[i].ty)
+		win_x, win_y = win_x*MinimapScale + MinimapOffsetX, win_y*MinimapScale + MinimapOffsetY
+		love.graphics.rectangle("line", win_x, win_y, TileWidth*MinimapScale, TileHeight*MinimapScale)
 	end
 end
 
-function gather_raycast()
-	dof_max = 32
-	ray_count = win_w
-        cone = (fov / 360.0) * tau * (win_w/win_h)
-	local ray_inc = cone / ray_count
-	local ray_angle = player_angle - cone/2
+local function gather_raycast()
+	local dof_max = 32
+    local cone = (FieldOfView / 360.0) * Tau * (WindowWidth/WindowHeight)
+	local ray_inc = cone / RayCount
+	local ray_angle = PlayerAngle - cone/2
 
-	if (draw_mode > 0) then
-		ray_count = math.fmod(runtime*draw_mode*(win_w / 100), ray_count)
+    local ray_count = RayCount
+
+	if (DrawMode > 0) then
+		ray_count = math.fmod(Runtime*DrawMode*(WindowWidth / 100), RayCount)
 	end
 
 	local hit_count = 0
 	local ray_hits = { }
 
 	for ray=1, ray_count do
-		if (ray_angle < 0.0) then ray_angle = ray_angle + tau
-		elseif (ray_angle > tau) then ray_angle = ray_angle - tau end
+		if (ray_angle < 0.0) then ray_angle = ray_angle + Tau
+		elseif (ray_angle > Tau) then ray_angle = ray_angle - Tau end
 
-		dof = 0
+		local dof = 0
 
-		xoff = math.cos(ray_angle)
-		yoff = math.sin(ray_angle)
-		x_delta, y_delta, x_side, y_side, x_step, y_step = 0.0, 0.0, 0.0, 0.0, 1, 1
+		local xoff = math.cos(ray_angle)
+		local yoff = math.sin(ray_angle)
+		local x_delta, y_delta, x_side, y_side, x_step, y_step = 0.0, 0.0, 0.0, 0.0, 1, 1
 
 		if (xoff == 0) then
 			x_delta = 1e30
@@ -154,17 +203,17 @@ function gather_raycast()
 		else y_delta = math.abs(1.0/yoff) end
 
 		if (xoff < 0.0) then
-			x_side = (player_x - math.floor(player_x)) * x_delta
+			x_side = (PlayerX - math.floor(PlayerX)) * x_delta
 			x_step = -1
-		else x_side = (math.floor(player_x) + 1.0 - player_x) * x_delta end
+		else x_side = (math.floor(PlayerX) + 1.0 - PlayerX) * x_delta end
 
 		if (yoff < 0.0) then
-			y_side = (player_y - math.floor(player_y)) * y_delta
+			y_side = (PlayerY - math.floor(PlayerY)) * y_delta
 			y_step = -1
-		else y_side = (math.floor(player_y) + 1.0 - player_y) * y_delta end
+		else y_side = (math.floor(PlayerY) + 1.0 - PlayerY) * y_delta end
 
-		tx, ty = math.floor(player_x), math.floor(player_y)
-		side = 0
+		local tx, ty = math.floor(PlayerX), math.floor(PlayerY)
+		local side = 0
 
 		while (dof < dof_max) do
 			dof = dof + 1
@@ -177,9 +226,8 @@ function gather_raycast()
 				y_side = y_side + y_delta
 				ty = ty + y_step
 			end
-			in_bounds = (tx < map_w+1 and ty < map_h+1 and tx > -1 and ty > -1)
-			if (in_bounds) then
-				local hit = map[coord_to_cell(tx, ty)]
+			if (tx < MapWidth+1 and ty < MapHeight+1 and tx > -1 and ty > -1) then
+				local hit = MapCells[coord_to_cell(tx, ty)]
 
 				if (hit > 0) then
 					dof = dof_max
@@ -196,8 +244,8 @@ function gather_raycast()
 
 					if (dist < 0.001) then dist = 0.001 end
 
-					rx = player_x + xoff * dist
-					ry = player_y + yoff * dist
+					local rx = PlayerX + xoff * dist
+					local ry = PlayerY + yoff * dist
 
 					if (side == 0) then
 						wall_x = ry
@@ -218,64 +266,61 @@ function gather_raycast()
 	return ray_hits, hit_count
 end
 
-function draw_raycast(ray_hits, hit_count)
-	hor_h = win_h * 0.4
-	pwx, pwy = map_to_window(player_x, player_y)
-	pwx, pwy = pwx*minimap_scale + minimap_x, pwy*minimap_scale+minimap_y
+local function draw_raycast(ray_hits, hit_count)
+	local hor_h = WindowHeight * 0.4
 
 	love.graphics.setColor(0.5, 0.5, 0.5)
-	love.graphics.rectangle("fill", 0, 0, win_w, hor_h)
+	love.graphics.rectangle("fill", 0, 0, WindowWidth, hor_h)
 	love.graphics.setColor(0.25, 0.25, 0.25)
-	love.graphics.rectangle("fill", 0, hor_h, win_w, win_h)
-        s_w = win_w/ray_count
+	love.graphics.rectangle("fill", 0, hor_h, WindowWidth, WindowHeight)
+    local s_w = WindowWidth/RayCount
 
 	for i = 1, hit_count do
-		mod = 1.0 - (ray_hits[i].dist/10)
+		local mod = 1.0 - (ray_hits[i].dist/10)
 
 		if (mod < 0.0) then
 			mod = 0.0
 		end
 
-		r_mod = 0.4 * mod
-		g_mod = 0.3 * mod
-		b_mod = 0.1 * mod
+		local r_mod = 0.4 * mod
+		local g_mod = 0.3 * mod
+		local b_mod = 0.1 * mod
 		love.graphics.setColor(0.5 + r_mod, 0.6 + g_mod, 0.8 + b_mod)
-		s_h = (win_h / ray_hits[i].dist)
-		start_x = s_w * (ray_hits[i].index-1)
-		--love.graphics.rectangle("fill", start_x, hor_h-(s_h*0.5), s_w, s_h)
-		love.graphics.draw(walltextures[ray_hits[i].type], wallquads[math.floor(ray_hits[i].side_px)], start_x, hor_h-(s_h*0.5), 0, s_w, s_h/64, 0, 0, 0, 0 )
+		local s_h = (WindowHeight / ray_hits[i].dist)
+		local start_x = s_w * (ray_hits[i].index-1)
+		love.graphics.draw(WallTextures[ray_hits[i].type], WallQuads[math.floor(ray_hits[i].side_px)], start_x, hor_h-(s_h*0.5), 0, s_w, s_h/64, 0, 0, 0, 0 )
 	end
 end
 
 function love.draw()
-	ray_hits, hit_count = gather_raycast()
+	local ray_hits, hit_count = gather_raycast()
 	draw_raycast(ray_hits, hit_count)
 	draw_map(ray_hits, hit_count)
 end
 
-function move_player(dir)
-	move_x = pdx * move_speed * dir
-	move_y = pdy * move_speed * dir
+local function move_player(dir)
+	local move_x = PlayerDirX * MoveSpeedCurrent * dir
+	local move_y = PlayerDirY * MoveSpeedCurrent * dir
 
-	if (dir == player_dir) then
-		move_speed = move_speed + move_speed_min * 20
+	if (dir == MoveDirection) then
+		MoveSpeedCurrent = MoveSpeedCurrent + MoveSpeedMin * 20
 	else
-		move_speed = move_speed_min
+		MoveSpeedCurrent = MoveSpeedMin
 	end
 
-	if (move_speed > move_speed_max) then
-		move_speed = move_speed_max
+	if (MoveSpeedCurrent > MoveSpeedMax) then
+		MoveSpeedCurrent = MoveSpeedMax
 	end
 
-	player_x, player_y = player_x + move_x, player_y + move_y
-	if (player_x > map_w) or (player_x < 0) or (player_y > map_h) or (player_y < 0)
-		or map[coord_to_cell(player_x+player_bounds, player_y+player_bounds)] > 0
-		or map[coord_to_cell(player_x-player_bounds, player_y+player_bounds)] > 0
-		or map[coord_to_cell(player_x+player_bounds, player_y-player_bounds)] > 0
-		or map[coord_to_cell(player_x-player_bounds, player_y-player_bounds)] > 0
+	PlayerX, PlayerY = PlayerX + move_x, PlayerY + move_y
+	if (PlayerX > MapWidth) or (PlayerX < 0) or (PlayerY > MapHeight) or (PlayerY < 0)
+		or MapCells[coord_to_cell(PlayerX+PlayerBounds, PlayerY+PlayerBounds)] > 0
+		or MapCells[coord_to_cell(PlayerX-PlayerBounds, PlayerY+PlayerBounds)] > 0
+		or MapCells[coord_to_cell(PlayerX+PlayerBounds, PlayerY-PlayerBounds)] > 0
+		or MapCells[coord_to_cell(PlayerX-PlayerBounds, PlayerY-PlayerBounds)] > 0
 		then
-		player_x, player_y = player_x - move_x, player_y - move_y
-		move_speed = move_speed_min
+		PlayerX, PlayerY = PlayerX - move_x, PlayerY - move_y
+		MoveSpeedCurrent = MoveSpeedMin
 	end
 end
 
@@ -285,24 +330,24 @@ function love.keypressed(key, scancode, isrepeat)
 	elseif (key == "down") then
 		move_player(-1)
 	else
-		move_speed = move_speed_min
+		MoveSpeedCurrent = MoveSpeedMin
 	end
 
 	if (key == "left") then
-		player_angle = player_angle - (tau/100)
-		if (player_angle < 0.0) then player_angle = tau end
+		PlayerAngle = PlayerAngle - (Tau/100)
+		if (PlayerAngle < 0.0) then PlayerAngle = Tau end
 	elseif (key == "right") then
-		player_angle = player_angle + (tau/100)
-		if (player_angle > tau) then player_angle = 0.0 end
+		PlayerAngle = PlayerAngle + (Tau/100)
+		if (PlayerAngle > Tau) then PlayerAngle = 0.0 end
 	elseif (key == "v") then
-		view_mode = view_mode + 1
-		if (view_mode > 1) then view_mode = 0 end
+		ViewMode = ViewMode + 1
+		if (ViewMode > 1) then ViewMode = 0 end
 	elseif (key == "d") then
-		draw_mode = draw_mode + 1
-		if (draw_mode > 8) then draw_mode = 0 end
+		DrawMode = DrawMode + 1
+		if (DrawMode > 8) then DrawMode = 0 end
 	elseif (key == "1") then
-		fov = fov - 1
+		FieldOfView = FieldOfView - 1
 	elseif (key == "2") then
-		fov = fov + 1
+		FieldOfView = FieldOfView + 1
 	end
 end
