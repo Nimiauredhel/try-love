@@ -90,15 +90,13 @@ function draw_map(ray_hits, hit_count)
 	x = minimap_x
 	y = minimap_y
 	scale = minimap_scale
+	love.graphics.setColor(0.0, 0.0, 0.0)
 	for map_x=1, map_w do
 		for map_y=1, map_h do
 			cell = coord_to_cell(map_x, map_y)
 			win_x, win_y = map_to_window(map_x, map_y)
-			love.graphics.setColor(0.2, 0.2, 0.2)
 			if map[cell] > 0 then
 				love.graphics.rectangle("fill", win_x*scale+x, win_y*scale+y, tile_w*scale, tile_h*scale)
-			else
-				love.graphics.rectangle("line", win_x*scale+x, win_y*scale+y, tile_w*scale, tile_h*scale)
 			end
 		end
 	end
