@@ -1,6 +1,7 @@
 -- Constants --
-Pi = 3.14159
 Tau = 6.283185
+Pi = 3.14159
+HalfPi = Pi*0.5
 
 -- Time --
 Runtime = 0
@@ -21,6 +22,8 @@ PlayerAngle = 0.0
 PlayerBounds = 0.2
 PlayerDirX = 1.0
 PlayerDirY = 0.0
+PlayerLatX = 1.0
+PlayerLatY = 0.0
 
 MoveSpeedMin = 0.1
 MoveSpeedMax = 0.75
@@ -121,13 +124,80 @@ local function coord_to_cell(map_x, map_y)
 	return cell
 end
 
+local function move_player(dir, lateral)
+    local dirx = PlayerDirX
+    local diry = PlayerDirY
+
+    if lateral then
+        dirx = PlayerLatX
+        diry = PlayerLatY
+    end
+
+	local move_x = dirx * MoveSpeedCurrent * dir
+	local move_y = diry * MoveSpeedCurrent * dir
+
+	if (dir == MoveDirection) then
+		MoveSpeedCurrent = MoveSpeedCurrent + MoveSpeedMin * 20
+	else
+		MoveSpeedCurrent = MoveSpeedMin
+	end
+
+	if (MoveSpeedCurrent > MoveSpeedMax) then
+		MoveSpeedCurrent = MoveSpeedMax
+	end
+
+	PlayerX, PlayerY = PlayerX + move_x, PlayerY + move_y
+	if (PlayerX > MapWidth) or (PlayerX < 0) or (PlayerY > MapHeight) or (PlayerY < 0)
+		or MapCells[coord_to_cell(PlayerX+PlayerBounds, PlayerY+PlayerBounds)] > 0
+		or MapCells[coord_to_cell(PlayerX-PlayerBounds, PlayerY+PlayerBounds)] > 0
+		or MapCells[coord_to_cell(PlayerX+PlayerBounds, PlayerY-PlayerBounds)] > 0
+		or MapCells[coord_to_cell(PlayerX-PlayerBounds, PlayerY-PlayerBounds)] > 0
+		then
+		PlayerX, PlayerY = PlayerX - move_x, PlayerY - move_y
+		MoveSpeedCurrent = MoveSpeedMin
+	end
+end
+
 function love.update(dt)
 	Runtime = Runtime + dt
 	update_scale()
 	PlayerDirX = math.cos(PlayerAngle)
 	PlayerDirY = math.sin(PlayerAngle)
+    PlayerLatX = math.cos(PlayerAngle+HalfPi)
+    PlayerLatY = math.sin(PlayerAngle+HalfPi)
 	MoveSpeedCurrent = MoveSpeedCurrent - MoveSpeedMin*0.01
 	if (MoveSpeedCurrent < MoveSpeedMin) then MoveSpeedCurrent = MoveSpeedMin end
+
+    local dir = 0.0
+    local dir_lat = 0.0
+
+	if (love.keyboard.isDown("up") or love.keyboard.isDown("w")) then
+        dir = 1.0
+    elseif (love.keyboard.isDown("down") or love.keyboard.isDown("s")) then
+		dir = -1.0
+    end
+
+	if (love.keyboard.isDown("d")) then
+        dir_lat = 1.0
+    elseif (love.keyboard.isDown("a")) then
+		dir_lat = -1.0
+    end
+
+    if (love.keyboard.isDown("left")) then
+		PlayerAngle = PlayerAngle - (Tau/100)
+		if (PlayerAngle < 0.0) then PlayerAngle = Tau end
+    elseif (love.keyboard.isDown("right")) then
+		PlayerAngle = PlayerAngle + (Tau/100)
+		if (PlayerAngle > Tau) then PlayerAngle = 0.0 end
+    end
+
+    if (dir ~= 0) then
+        move_player(dir, false)
+    end
+
+    if (dir_lat ~= 0) then
+        move_player(dir_lat, true)
+    end
 end
 
 local function draw_map(ray_hits, hit_count)
@@ -298,53 +368,8 @@ function love.draw()
 	draw_map(ray_hits, hit_count)
 end
 
-local function move_player(dir, lateral)
-	local move_x = PlayerDirX * MoveSpeedCurrent * dir
-	local move_y = PlayerDirY * MoveSpeedCurrent * dir
-    if lateral then
-        local temp = move_y
-        move_y = move_x
-        move_x = temp
-    end
-
-	if (dir == MoveDirection) then
-		MoveSpeedCurrent = MoveSpeedCurrent + MoveSpeedMin * 20
-	else
-		MoveSpeedCurrent = MoveSpeedMin
-	end
-
-	if (MoveSpeedCurrent > MoveSpeedMax) then
-		MoveSpeedCurrent = MoveSpeedMax
-	end
-
-	PlayerX, PlayerY = PlayerX + move_x, PlayerY + move_y
-	if (PlayerX > MapWidth) or (PlayerX < 0) or (PlayerY > MapHeight) or (PlayerY < 0)
-		or MapCells[coord_to_cell(PlayerX+PlayerBounds, PlayerY+PlayerBounds)] > 0
-		or MapCells[coord_to_cell(PlayerX-PlayerBounds, PlayerY+PlayerBounds)] > 0
-		or MapCells[coord_to_cell(PlayerX+PlayerBounds, PlayerY-PlayerBounds)] > 0
-		or MapCells[coord_to_cell(PlayerX-PlayerBounds, PlayerY-PlayerBounds)] > 0
-		then
-		PlayerX, PlayerY = PlayerX - move_x, PlayerY - move_y
-		MoveSpeedCurrent = MoveSpeedMin
-	end
-end
-
 function love.keypressed(key, scancode, isrepeat)
-	if (key == "up" or key == "w") then
-		move_player(1, false)
-	elseif (key == "down" or key == "s") then
-		move_player(-1, false)
-    elseif (key == "left") then
-		PlayerAngle = PlayerAngle - (Tau/100)
-		if (PlayerAngle < 0.0) then PlayerAngle = Tau end
-	elseif (key == "right") then
-		PlayerAngle = PlayerAngle + (Tau/100)
-		if (PlayerAngle > Tau) then PlayerAngle = 0.0 end
-    elseif (key == "d") then
-		move_player(1, true)
-    elseif (key == "a") then
-		move_player(-1, true)
-	elseif (key == "1") then
+	if (key == "1") then
 		FieldOfView = FieldOfView - 1
 	elseif (key == "2") then
 		FieldOfView = FieldOfView + 1
