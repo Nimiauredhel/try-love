@@ -131,9 +131,6 @@ function gather_raycast()
 		elseif (ray_angle > tau) then ray_angle = ray_angle - tau end
 
 		dof = 0
-		atan = -math.tan(ray_angle)
-		pxi, pxf = math.modf(player_x)
-		pyi, pyf = math.modf(player_y)
 
 		xoff = math.cos(ray_angle)
 		yoff = math.sin(ray_angle)
