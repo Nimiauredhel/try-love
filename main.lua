@@ -33,7 +33,6 @@ MoveDirection = 0
 -- Drawing --
 FieldOfView = 55.0
 RayCount = WindowWidth
-ViewMode = 0
 DrawMode = 0
 
 -- Minimap --
@@ -81,7 +80,6 @@ function love.load()
 	MoveSpeedCurrent = MoveSpeedMin
 	load_map()
 	update_scale()
-	ViewMode = 0
 	DrawMode = 0
 
 	PlayerX, PlayerY = MapWidth/2, MapHeight/2
