@@ -126,7 +126,7 @@ function love.update(dt)
 	update_scale()
 	PlayerDirX = math.cos(PlayerAngle)
 	PlayerDirY = math.sin(PlayerAngle)
-	MoveSpeedCurrent = MoveSpeedCurrent - MoveSpeedMin
+	MoveSpeedCurrent = MoveSpeedCurrent - MoveSpeedMin*0.01
 	if (MoveSpeedCurrent < MoveSpeedMin) then MoveSpeedCurrent = MoveSpeedMin end
 end
 
@@ -298,9 +298,14 @@ function love.draw()
 	draw_map(ray_hits, hit_count)
 end
 
-local function move_player(dir)
+local function move_player(dir, lateral)
 	local move_x = PlayerDirX * MoveSpeedCurrent * dir
 	local move_y = PlayerDirY * MoveSpeedCurrent * dir
+    if lateral then
+        local temp = move_y
+        move_y = move_x
+        move_x = temp
+    end
 
 	if (dir == MoveDirection) then
 		MoveSpeedCurrent = MoveSpeedCurrent + MoveSpeedMin * 20
@@ -325,29 +330,29 @@ local function move_player(dir)
 end
 
 function love.keypressed(key, scancode, isrepeat)
-	if (key == "up") then
-		move_player(1)
-	elseif (key == "down") then
-		move_player(-1)
-	else
-		MoveSpeedCurrent = MoveSpeedMin
-	end
-
-	if (key == "left") then
+	if (key == "up" or key == "w") then
+		move_player(1, false)
+	elseif (key == "down" or key == "s") then
+		move_player(-1, false)
+    elseif (key == "left") then
 		PlayerAngle = PlayerAngle - (Tau/100)
 		if (PlayerAngle < 0.0) then PlayerAngle = Tau end
 	elseif (key == "right") then
 		PlayerAngle = PlayerAngle + (Tau/100)
 		if (PlayerAngle > Tau) then PlayerAngle = 0.0 end
-	elseif (key == "v") then
-		ViewMode = ViewMode + 1
-		if (ViewMode > 1) then ViewMode = 0 end
-	elseif (key == "d") then
-		DrawMode = DrawMode + 1
-		if (DrawMode > 8) then DrawMode = 0 end
+    elseif (key == "d") then
+		move_player(1, true)
+    elseif (key == "a") then
+		move_player(-1, true)
 	elseif (key == "1") then
 		FieldOfView = FieldOfView - 1
 	elseif (key == "2") then
 		FieldOfView = FieldOfView + 1
+	elseif (key == "3") then
+		DrawMode = DrawMode - 1
+		if (DrawMode < 0) then DrawMode = 8 end
+	elseif (key == "4") then
+		DrawMode = DrawMode + 1
+		if (DrawMode > 8) then DrawMode = 0 end
 	end
 end
