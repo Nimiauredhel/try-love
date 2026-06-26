@@ -86,7 +86,7 @@ function love.update(dt)
 	if (move_speed < move_speed_min) then move_speed = move_speed_min end
 end
 
-function draw_map()
+function draw_map(ray_hits, hit_count)
 	x = minimap_x
 	y = minimap_y
 	scale = minimap_scale
@@ -110,6 +110,17 @@ function draw_map()
 	win_y = win_y - tile_h/2
 	love.graphics.setColor(0.8, 0.2, 0.2)
 	love.graphics.rectangle("fill", win_x*scale+x, win_y*scale+y, tile_w*scale, tile_h*scale)
+
+	for i = 1, hit_count do
+		wx, wy = map_to_window(ray_hits[i].rx, ray_hits[i].ry)
+		wx, wy = wx*minimap_scale + minimap_x, wy*minimap_scale + minimap_y
+		love.graphics.setColor(1.0, 0.0, 0.0)
+		love.graphics.line(pwx, pwy, wx, wy)
+		love.graphics.setColor(0.0, 1.0, 0.0)
+		wx, wy = map_to_window(ray_hits[i].tx, ray_hits[i].ty)
+		wx, wy = wx*minimap_scale + minimap_x, wy*minimap_scale + minimap_y
+		love.graphics.rectangle("line", wx, wy, tile_w*minimap_scale, tile_h*minimap_scale)
+	end
 end
 
 function gather_raycast()
@@ -235,24 +246,13 @@ function draw_raycast(ray_hits, hit_count)
 		start_x = s_w * (ray_hits[i].index-1)
 		--love.graphics.rectangle("fill", start_x, hor_h-(s_h*0.5), s_w, s_h)
 		love.graphics.draw(walltextures[ray_hits[i].type], wallquads[math.floor(ray_hits[i].side_px)], start_x, hor_h-(s_h*0.5), 0, s_w, s_h/64, 0, 0, 0, 0 )
-
--- minimap rays
-		wx, wy = map_to_window(ray_hits[i].rx, ray_hits[i].ry)
-		wx, wy = wx*minimap_scale + minimap_x, wy*minimap_scale + minimap_y
-		love.graphics.setColor(1.0, 0.0, 0.0)
-		love.graphics.line(pwx, pwy, wx, wy)
-		love.graphics.setColor(0.0, 1.0, 0.0)
-		wx, wy = map_to_window(ray_hits[i].tx, ray_hits[i].ty)
-		wx, wy = wx*minimap_scale + minimap_x, wy*minimap_scale + minimap_y
-		love.graphics.rectangle("line", wx, wy, tile_w*minimap_scale, tile_h*minimap_scale)
 	end
-
 end
 
 function love.draw()
 	ray_hits, hit_count = gather_raycast()
 	draw_raycast(ray_hits, hit_count)
-	draw_map()
+	draw_map(ray_hits, hit_count)
 end
 
 function move_player(dir)
