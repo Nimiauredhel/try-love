@@ -31,6 +31,10 @@ MoveSpeedMax = 0.75
 MoveSpeedCurrent = MoveSpeedMin
 MoveDirection = 0
 
+-- Entities --
+EntityCount = 0
+Entities = { }
+
 -- Drawing --
 FieldOfView = 55.0
 Cone = (FieldOfView / 360.0) * Tau * (WindowWidth/WindowHeight)
@@ -50,9 +54,6 @@ WallTextures = { }
 WallQuads = { }
 CharSheets = { }
 CharQuads = { }
-
-CharX = 8
-CharY = 6
 
 local function load_map()
 	MapWidth, MapHeight = 16, 16
@@ -120,13 +121,29 @@ function love.load()
 		table.insert(WallQuads, love.graphics.newQuad(i, 0, 1, 64, 64, 64 ))
 	end
 
+    -- load entity sprite sheets
 	table.insert(CharSheets, love.graphics.newImage("gorksprite.png", nil))
+
+    -- define sprite vertical strips as list of quads
 	for i = 0, 3 do
         for j = 0, 3 do
 	for stripe = 0, 15 do
             table.insert(CharQuads, love.graphics.newQuad(16*i+stripe, 16*j, 1, 16, 64, 64 ))
 	end
         end
+	end
+
+    -- load entity list
+    local entity_count = 4
+    local entities_to_load = {
+        { x = 8, y = 6.5, sheet = 1, x_scale = 1.0, y_scale = 1.0, y_offset = 0.0 },
+        { x = 4.5, y = 8.5, sheet = 1, x_scale = 0.5, y_scale = 0.5, y_offset = 0.5 },
+        { x = 3.5, y = 12.5, sheet = 1, x_scale = 0.5, y_scale = 0.5, y_offset = 0.5 },
+        { x = 11.5, y = 10, sheet = 1, x_scale = 1.0, y_scale = 1.0, y_offset = 0.0 },
+    }
+	for i = 1, entity_count do
+        table.insert(Entities, entities_to_load[i])
+        EntityCount = EntityCount + 1
 	end
 end
 
@@ -385,41 +402,54 @@ end
 local function draw_sprites(ray_hits, hit_count)
 	local plane_x = PlayerLatX*Cone/2
 	local plane_y = PlayerDirX*Cone/2
-	local sprite_x = CharX-PlayerX
-	local sprite_y = CharY-PlayerY
 	local invDet = 1.0 / (plane_x*PlayerDirY-PlayerDirX*plane_y)
 
-	local transform_x = invDet * (PlayerDirY*sprite_x-PlayerDirX*sprite_y)
-	local transform_y = invDet * (-plane_y*sprite_x+plane_x*sprite_y)
-	local sprite_screen_x = math.floor((WindowWidth/2.0)*(1.0+transform_x/transform_y))
-    if (math.fmod(sprite_screen_x, 2) > 0) then sprite_screen_x = sprite_screen_x - 1 end
+    for entity = 1, EntityCount do
+        local sprite_x = Entities[entity].x-PlayerX
+        local sprite_y = Entities[entity].y-PlayerY
 
-	local sprite_height = math.abs(math.floor(WindowHeight/transform_y))
-    if (math.fmod(sprite_height, 2) > 0) then sprite_height = sprite_height - 1 end
-	local start_y = -sprite_height / 2 + WindowHeight * 0.4
-	if (start_y < 0) then start_y = 0 end
-	local end_y = sprite_height / 2 + WindowHeight * 0.4
-	if (end_y > WindowHeight) then end_y = WindowHeight end
+        local transform_x = invDet * (PlayerDirY*sprite_x-PlayerDirX*sprite_y)
+        local transform_y = invDet * (-plane_y*sprite_x+plane_x*sprite_y)
+        local sprite_screen_x = math.ceil((WindowWidth/2.0)*(1.0+transform_x/transform_y))
 
-	local sprite_width = math.abs(math.floor(WindowWidth/transform_y))
-    if (math.fmod(sprite_width, 2) > 0) then sprite_width = sprite_width - 1 end
-	local start_x = -sprite_width / 2 + sprite_screen_x
-	if (start_x < 0) then start_x = 0 end
-	local end_x = sprite_width / 2 + sprite_screen_x
-	if (end_x > WindowWidth) then end_x = WindowWidth end
+        local sprite_height = math.ceil(math.abs(math.floor(WindowHeight/transform_y)) * Entities[entity].y_scale)
 
-    love.graphics.setColor(1, 1, 1)
-    local attempt_count = 0
-    local stripe_count = 0
+        local y_offset = math.ceil(Entities[entity].y_offset * sprite_height)
 
-	for stripe = start_x, end_x-1 do
-		local tex_x = math.floor((stripe -(-sprite_width/2+sprite_screen_x)) * 16 / sprite_width)
-        attempt_count = attempt_count + 1
-		if (stripe < WindowWidth-1 and tex_x < 16 and stripe < hit_count and stripe > 0 and transform_y > 0 and ray_hits[stripe] ~= nil and ray_hits[stripe].dist > transform_y) then
-            stripe_count = stripe_count + 1
-            love.graphics.draw(CharSheets[1], CharQuads[tex_x+1], stripe, start_y, 0, sprite_width/(16*16), sprite_height/16, 0, 0, 0, 0 )
-		end
-	end
+        local start_y = -sprite_height / 2 + HorizonY - y_offset
+        if (start_y < 0) then start_y = 0 end
+        local end_y = sprite_height / 2 + HorizonY - y_offset
+        if (end_y > WindowHeight) then end_y = WindowHeight end
+
+        local sprite_width = math.ceil(math.abs(math.floor(WindowWidth/transform_y)) * Entities[entity].x_scale)
+        if (sprite_width % 2 > 0) then sprite_width = sprite_width - 1 end
+        local start_x = -sprite_width / 2 + sprite_screen_x
+        if (start_x < 0) then start_x = 0 end
+        local end_x = sprite_width / 2 + sprite_screen_x
+        if (end_x > WindowWidth) then end_x = WindowWidth end
+
+        love.graphics.setColor(1, 1, 1)
+        local attempt_count = 0
+        local stripe_count = 0
+
+        local px_width = 16
+        local px_height = 16
+        local scaled_width = px_width * Entities[entity].x_scale
+        local scaled_width_pow = scaled_width*scaled_width
+        local scaled_height = px_height * Entities[entity].y_scale
+        local final_width, final_height = sprite_width/scaled_width_pow, sprite_height/scaled_height
+        if (final_width < 1.0) then final_width = 1.0 end
+        if (final_height < 1.0) then final_height = 1.0 end
+
+        for stripe = start_x, end_x-1 do
+            local tex_x = math.floor((stripe -(-sprite_width/2+sprite_screen_x)) * px_width / sprite_width)
+            attempt_count = attempt_count + 1
+            if (stripe < WindowWidth-1 and tex_x < px_width and stripe < hit_count and stripe > 0 and transform_y > 0 and ray_hits[stripe] ~= nil and ray_hits[stripe].dist > transform_y) then
+                stripe_count = stripe_count + 1
+                love.graphics.draw(CharSheets[Entities[entity].sheet], CharQuads[tex_x+1], stripe, start_y, 0, final_width, final_height, 0, 0, 0, 0 )
+            end
+        end
+    end
 end
 
 function love.draw()
