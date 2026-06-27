@@ -417,12 +417,9 @@ local function draw_sprites(ray_hits, hit_count)
         attempt_count = attempt_count + 1
 		if (stripe < WindowWidth-1 and tex_x < 16 and stripe < hit_count and stripe > 0 and transform_y > 0 and ray_hits[stripe] ~= nil and ray_hits[stripe].dist > transform_y) then
             stripe_count = stripe_count + 1
-            love.graphics.draw(CharSheets[1], CharQuads[tex_x+1], stripe, start_y, 0, sprite_width/16, sprite_height/16, 0, 0, 0, 0 )
+            love.graphics.draw(CharSheets[1], CharQuads[tex_x+1], stripe, start_y, 0, sprite_width/(16*16), sprite_height/16, 0, 0, 0, 0 )
 		end
 	end
-
-    love.graphics.print(string.format("SPRITE STARTX %f STARTY %f WIDTH %f HEIGHT %f STRIPES %d/%d", start_x, start_y, sprite_width, sprite_height, stripe_count, attempt_count), 20, WindowHeight*0.9, 0, 1, 1)
-    love.graphics.print(string.format("HITCOUNT %d TRANSFORMX %f TRANSFORMY %f INVDET %f", hit_count, transform_x, transform_y, invDet), 20, WindowHeight*0.8, 0, 1, 1)
 end
 
 function love.draw()
