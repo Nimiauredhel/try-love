@@ -33,6 +33,7 @@ MoveDirection = 0
 
 -- Drawing --
 FieldOfView = 55.0
+Cone = (FieldOfView / 360.0) * Tau * (WindowWidth/WindowHeight)
 RayCount = WindowWidth
 DrawMode = 0
 
@@ -81,6 +82,7 @@ local function update_scale()
 	TileWidth = WindowWidth / MapWidth
 	TileHeight = TileWidth
     RayCount = WindowWidth
+    Cone = (FieldOfView / 360.0) * Tau * (WindowWidth/WindowHeight)
 end
 
 function love.load()
@@ -176,9 +178,8 @@ end
 
 local function gather_raycast()
 	local dof_max = 32
-    local cone = (FieldOfView / 360.0) * Tau * (WindowWidth/WindowHeight)
-	local ray_inc = cone / RayCount
-	local ray_angle = PlayerAngle - cone/2
+	local ray_inc = Cone / RayCount
+	local ray_angle = PlayerAngle - Cone/2
 
     local ray_count = RayCount
 
