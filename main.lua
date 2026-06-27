@@ -397,6 +397,8 @@ function draw_sprites(ray_hits, hit_count)
 	local end_x = sprite_width / 2 + sprite_screen_x
 	if (end_x > WindowWidth) then end_x = WindowWidth end
 
+	    love.graphics.setColor(1, 1, 1)
+
 	for stripe = start_x, end_x-1 do
 		local tex_x = math.floor((stripe -(-sprite_width/2+sprite_screen_x)) * 16 / sprite_width)
 		local w_x = stripe
@@ -411,10 +413,6 @@ function love.draw()
 	draw_raycast(ray_hits, hit_count)
 	draw_sprites(ray_hits, hit_count)
 	draw_map(ray_hits, hit_count)
-    love.graphics.setColor(1, 1, 1)
-    for stripe = 1, 16 do
-    love.graphics.draw(CharSheets[1], CharQuads[stripe], 100+stripe*10, 100, 0, 10, 10, 0, 0, 0, 0 )
-    end
 end
 
 function love.keypressed(key, scancode, isrepeat)
