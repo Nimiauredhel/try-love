@@ -8,6 +8,7 @@ Runtime = 0
 
 -- Window --
 WindowWidth, WindowHeight = 1920, 1080
+HorizonY = WindowHeight * 0.4
 
 -- Map --
 MapWidth, MapHeight = 16, 16
@@ -76,12 +77,14 @@ end
 
 local function update_scale()
 	WindowWidth, WindowHeight = love.graphics.getDimensions()
+    HorizonY = WindowHeight * 0.4
 	TileWidth = WindowWidth / MapWidth
 	TileHeight = TileWidth
     RayCount = WindowWidth
 end
 
 function love.load()
+    love.graphics.setDefaultFilter( "nearest", "nearest", 16 )
     Runtime = 0
 	MoveSpeedMin = 0.1
 	MoveSpeedMax = 0.75
@@ -351,13 +354,14 @@ local function draw_map(ray_hits, hit_count)
 	end
 end
 
-local function draw_raycast(ray_hits, hit_count)
-	local hor_h = WindowHeight * 0.4
-
+local function draw_constants()
 	love.graphics.setColor(0.5, 0.5, 0.5)
-	love.graphics.rectangle("fill", 0, 0, WindowWidth, hor_h)
+	love.graphics.rectangle("fill", 0, 0, WindowWidth, HorizonY)
 	love.graphics.setColor(0.25, 0.25, 0.25)
-	love.graphics.rectangle("fill", 0, hor_h, WindowWidth, WindowHeight)
+	love.graphics.rectangle("fill", 0, HorizonY, WindowWidth, WindowHeight)
+end
+
+local function draw_raycast(ray_hits, hit_count)
     local s_w = WindowWidth/RayCount
 
 	for i = 1, hit_count do
@@ -373,7 +377,7 @@ local function draw_raycast(ray_hits, hit_count)
 		love.graphics.setColor(0.5 + r_mod, 0.6 + g_mod, 0.8 + b_mod)
 		local s_h = (WindowHeight / ray_hits[i].dist)
 		local start_x = s_w * (ray_hits[i].index-1)
-		love.graphics.draw(WallTextures[ray_hits[i].type], WallQuads[math.floor(ray_hits[i].side_px)], start_x, hor_h-(s_h*0.5), 0, s_w, s_h/64, 0, 0, 0, 0 )
+		love.graphics.draw(WallTextures[ray_hits[i].type], WallQuads[math.floor(ray_hits[i].side_px)], start_x, HorizonY-(s_h*0.5), 0, s_w, s_h/64, 0, 0, 0, 0 )
 	end
 end
 
@@ -386,17 +390,18 @@ local function draw_sprites(ray_hits, hit_count)
 
 	local transform_x = invDet * (PlayerDirY*sprite_x-PlayerDirX*sprite_y)
 	local transform_y = invDet * (-plane_y*sprite_x+plane_x*sprite_y)
-	local sprite_screen_x = math.floor((WindowWidth/2)*(1+transform_x/transform_y))
+	local sprite_screen_x = math.floor((WindowWidth/2.0)*(1.0+transform_x/transform_y))
+    if (math.fmod(sprite_screen_x, 2) > 0) then sprite_screen_x = sprite_screen_x - 1 end
 
 	local sprite_height = math.abs(math.floor(WindowHeight/transform_y))
-    if (math.fmod(sprite_height, 2) > 0) then sprite_height = sprite_height + 1 end
+    if (math.fmod(sprite_height, 2) > 0) then sprite_height = sprite_height - 1 end
 	local start_y = -sprite_height / 2 + WindowHeight * 0.4
 	if (start_y < 0) then start_y = 0 end
 	local end_y = sprite_height / 2 + WindowHeight * 0.4
 	if (end_y > WindowHeight) then end_y = WindowHeight end
 
 	local sprite_width = math.abs(math.floor(WindowWidth/transform_y))
-    if (math.fmod(sprite_width, 2) > 0) then sprite_width = sprite_width + 1 end
+    if (math.fmod(sprite_width, 2) > 0) then sprite_width = sprite_width - 1 end
 	local start_x = -sprite_width / 2 + sprite_screen_x
 	if (start_x < 0) then start_x = 0 end
 	local end_x = sprite_width / 2 + sprite_screen_x
@@ -409,7 +414,7 @@ local function draw_sprites(ray_hits, hit_count)
 	for stripe = start_x, end_x-1 do
 		local tex_x = math.floor((stripe -(-sprite_width/2+sprite_screen_x)) * 16 / sprite_width)
         attempt_count = attempt_count + 1
-		if (stripe < WindowWidth and tex_x < 16 and stripe <= hit_count and stripe >= 0 and transform_y >= 0 and ray_hits[stripe] ~= nil and ray_hits[stripe].dist >= transform_y) then
+		if (stripe < WindowWidth-1 and tex_x < 16 and stripe < hit_count and stripe > 0 and transform_y > 0 and ray_hits[stripe] ~= nil and ray_hits[stripe].dist > transform_y) then
             stripe_count = stripe_count + 1
             love.graphics.draw(CharSheets[1], CharQuads[tex_x+1], stripe, start_y, 0, sprite_width/16, sprite_height/16, 0, 0, 0, 0 )
 		end
@@ -420,6 +425,7 @@ local function draw_sprites(ray_hits, hit_count)
 end
 
 function love.draw()
+    draw_constants()
 	draw_raycast(RayHits, HitCount)
 	draw_sprites(RayHits, HitCount)
 	draw_map(RayHits, HitCount)
