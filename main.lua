@@ -383,8 +383,8 @@ local function draw_raycast(ray_hits, hit_count)
 end
 
 local function draw_sprites(ray_hits, hit_count)
-	local plane_x = PlayerLatX
-	local plane_y = PlayerDirX
+	local plane_x = PlayerLatX*Cone/2
+	local plane_y = PlayerDirX*Cone/2
 	local sprite_x = CharX-PlayerX
 	local sprite_y = CharY-PlayerY
 	local invDet = 1.0 / (plane_x*PlayerDirY-PlayerDirX*plane_y)
