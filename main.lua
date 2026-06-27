@@ -37,8 +37,8 @@ Entities = { }
 
 -- Drawing --
 FieldOfView = 55.0
-Cone = (FieldOfView / 360.0) * Tau * (WindowWidth/WindowHeight)
-RayCount = WindowWidth
+Ratio = WindowWidth/WindowHeight
+Cone = (FieldOfView / 360.0) * Tau * Ratio
 DrawMode = 0
 
 RayHits = { }
@@ -83,7 +83,8 @@ local function update_scale()
 	TileWidth = WindowWidth / MapWidth
 	TileHeight = TileWidth
     RayCount = WindowWidth
-    Cone = (FieldOfView / 360.0) * Tau * (WindowWidth/WindowHeight)
+    Ratio = WindowWidth/WindowHeight
+    Cone = (FieldOfView / 360.0) * Tau * Ratio
 end
 
 function love.load()
@@ -421,7 +422,7 @@ local function draw_sprites(ray_hits, hit_count)
         local end_y = sprite_height / 2 + HorizonY - y_offset
         if (end_y > WindowHeight) then end_y = WindowHeight end
 
-        local sprite_width = math.ceil(math.abs(math.floor(WindowWidth/transform_y)) * Entities[entity].x_scale)
+        local sprite_width = math.ceil(math.abs(math.floor(WindowWidth/transform_y)) * Entities[entity].x_scale / Ratio)
         if (sprite_width % 2 > 0) then sprite_width = sprite_width - 1 end
         local start_x = -sprite_width / 2 + sprite_screen_x
         if (start_x < 0) then start_x = 0 end
