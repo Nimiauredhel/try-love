@@ -46,6 +46,9 @@ WallQuads = { }
 CharSheets = { }
 CharQuads = { }
 
+CharX = 8
+CharY = 6
+
 local function load_map()
 	MapWidth, MapHeight = 16, 16
 	MapCells = {
@@ -112,9 +115,11 @@ function love.load()
 	end
 
 	table.insert(CharSheets, love.graphics.newImage("gorksprite.png", nil))
-	for i = 1, 4 do
-        for j = 1, 4 do
-            table.insert(CharQuads, love.graphics.newQuad(16*i, 16*j, 16, 16, 64, 64 ))
+	for i = 0, 3 do
+        for j = 0, 3 do
+	for stripe = 0, 15 do
+            table.insert(CharQuads, love.graphics.newQuad(16*i+stripe, 16*j, 1, 16, 64, 64 ))
+	end
         end
 	end
 end
@@ -368,16 +373,48 @@ local function draw_raycast(ray_hits, hit_count)
 		love.graphics.draw(WallTextures[ray_hits[i].type], WallQuads[math.floor(ray_hits[i].side_px)], start_x, hor_h-(s_h*0.5), 0, s_w, s_h/64, 0, 0, 0, 0 )
 	end
 end
-spr = 1
+
+function draw_sprites(ray_hits, hit_count)
+	local plane_x = PlayerLatX
+	local plane_y = PlayerDirX
+	local sprite_x = CharX-PlayerX
+	local sprite_y = CharY-PlayerY
+	local invDet = 1.0 / (plane_x*PlayerDirY-PlayerDirX*plane_y)
+
+	local transform_x = invDet * (PlayerDirY*sprite_x-PlayerDirX*sprite_y)
+	local transform_y = invDet * (-plane_y*sprite_x+plane_x*sprite_y)
+	local sprite_screen_x = math.floor((WindowWidth/2)*(1+transform_x/transform_y))
+
+	local sprite_height = math.abs(math.floor(WindowHeight/transform_y))
+	local start_y = -sprite_height / 2 + WindowHeight * 0.4
+	if (start_y < 0) then start_y = 0 end
+	local end_y = sprite_height / 2 + WindowHeight * 0.4
+	if (end_y > WindowHeight) then end_y = WindowHeight end
+
+	local sprite_width = math.abs(math.floor(WindowWidth/transform_y))
+	local start_x = -sprite_width / 2 + sprite_screen_x
+	if (start_x < 0) then start_x = 0 end
+	local end_x = sprite_width / 2 + sprite_screen_x
+	if (end_x > WindowWidth) then end_x = WindowWidth end
+
+	for stripe = start_x, end_x-1 do
+		local tex_x = math.floor((stripe -(-sprite_width/2+sprite_screen_x)) * 16 / sprite_width)
+		local w_x = stripe
+		if (w_x < WindowWidth and tex_x < 16 and stripe < hit_count and stripe > 0 and transform_y > 0 and ray_hits[stripe] ~= nil and ray_hits[stripe].dist > transform_y) then
+		love.graphics.draw(CharSheets[1], CharQuads[tex_x+1], w_x, start_y, 0, sprite_width/16, sprite_height/16, 0, 0, 0, 0 )
+		end
+	end
+end
 
 function love.draw()
 	local ray_hits, hit_count = gather_raycast()
 	draw_raycast(ray_hits, hit_count)
+	draw_sprites(ray_hits, hit_count)
 	draw_map(ray_hits, hit_count)
     love.graphics.setColor(1, 1, 1)
-    love.graphics.draw(CharSheets[1], CharQuads[math.floor(spr)], 100, 100, 0, 10, 10, 0, 0, 0, 0 )
-    spr = spr + 0.1
-    if spr > 16 then spr = 1 end
+    for stripe = 1, 16 do
+    love.graphics.draw(CharSheets[1], CharQuads[stripe], 100+stripe*10, 100, 0, 10, 10, 0, 0, 0, 0 )
+    end
 end
 
 function love.keypressed(key, scancode, isrepeat)
