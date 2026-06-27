@@ -35,6 +35,9 @@ FieldOfView = 55.0
 RayCount = WindowWidth
 DrawMode = 0
 
+RayHits = { }
+HitCount = 0
+
 -- Minimap --
 MinimapScale = 0.25
 MinimapOffsetX = WindowWidth * 0.025
@@ -97,8 +100,6 @@ function love.load()
 	MinimapScale = 0.25
 	MinimapOffsetX = WindowWidth * 0.025
 	MinimapOffsetY = WindowHeight * 0.025
-
-	love.keyboard.setKeyRepeat(true)
 
     -- load wall textures
 	table.insert(WallTextures, love.graphics.newImage("Brick01.png", nil))
@@ -167,87 +168,6 @@ local function move_player(dir, lateral)
 		then
 		PlayerX, PlayerY = PlayerX - move_x, PlayerY - move_y
 		MoveSpeedCurrent = MoveSpeedMin
-	end
-end
-
-function love.update(dt)
-	Runtime = Runtime + dt
-	update_scale()
-	PlayerDirX = math.cos(PlayerAngle)
-	PlayerDirY = math.sin(PlayerAngle)
-    PlayerLatX = math.cos(PlayerAngle+HalfPi)
-    PlayerLatY = math.sin(PlayerAngle+HalfPi)
-	MoveSpeedCurrent = MoveSpeedCurrent - MoveSpeedMin*0.01
-	if (MoveSpeedCurrent < MoveSpeedMin) then MoveSpeedCurrent = MoveSpeedMin end
-
-    local dir = 0.0
-    local dir_lat = 0.0
-
-	if (love.keyboard.isDown("up") or love.keyboard.isDown("w")) then
-        dir = 1.0
-    elseif (love.keyboard.isDown("down") or love.keyboard.isDown("s")) then
-		dir = -1.0
-    end
-
-	if (love.keyboard.isDown("d")) then
-        dir_lat = 1.0
-    elseif (love.keyboard.isDown("a")) then
-		dir_lat = -1.0
-    end
-
-    if (love.keyboard.isDown("left")) then
-		PlayerAngle = PlayerAngle - (Tau/100)
-		if (PlayerAngle < 0.0) then PlayerAngle = Tau end
-    elseif (love.keyboard.isDown("right")) then
-		PlayerAngle = PlayerAngle + (Tau/100)
-		if (PlayerAngle > Tau) then PlayerAngle = 0.0 end
-    end
-
-    if (dir ~= 0) then
-        move_player(dir, false)
-    end
-
-    if (dir_lat ~= 0) then
-        move_player(dir_lat, true)
-    end
-end
-
-local function draw_map(ray_hits, hit_count)
-	local x = MinimapOffsetX
-	local y = MinimapOffsetY
-	local scale = MinimapScale
-
-	local pwx, pwy = map_to_window(PlayerX, PlayerY)
-	pwx, pwy = pwx*scale+x, pwy*scale+y
-
-	love.graphics.setColor(0.0, 0.0, 0.0)
-	for map_x=1, MapWidth do
-		for map_y=1, MapHeight do
-			local cell = coord_to_cell(map_x, map_y)
-			local win_x, win_y = map_to_window(map_x, map_y)
-			if MapCells[cell] > 0 then
-				love.graphics.rectangle("fill", win_x*scale+x, win_y*scale+y, TileWidth*scale, TileHeight*scale)
-			end
-		end
-	end
-
-	local win_x, win_y = map_to_window(PlayerX, PlayerY)
-	love.graphics.setColor(1.0, 1.0, 1.0)
-	love.graphics.line(win_x*scale+x, win_y*scale+y, win_x*scale+(PlayerDirX*2.0*TileWidth*scale)+x, win_y*scale+(PlayerDirY*2.0*TileHeight*scale)+y)
-	win_x = win_x - TileWidth/2
-	win_y = win_y - TileHeight/2
-	love.graphics.setColor(0.8, 0.2, 0.2)
-	love.graphics.rectangle("fill", win_x*scale+x, win_y*scale+y, TileWidth*scale, TileHeight*scale)
-
-	for i = 1, hit_count do
-		win_x, win_y = map_to_window(ray_hits[i].rx, ray_hits[i].ry)
-		win_x, win_y = win_x*MinimapScale + MinimapOffsetX, win_y*MinimapScale + MinimapOffsetY
-		love.graphics.setColor(1.0, 0.0, 0.0)
-		love.graphics.line(pwx, pwy, win_x, win_y)
-		love.graphics.setColor(0.0, 1.0, 0.0)
-		win_x, win_y = map_to_window(ray_hits[i].tx, ray_hits[i].ty)
-		win_x, win_y = win_x*MinimapScale + MinimapOffsetX, win_y*MinimapScale + MinimapOffsetY
-		love.graphics.rectangle("line", win_x, win_y, TileWidth*MinimapScale, TileHeight*MinimapScale)
 	end
 end
 
@@ -348,6 +268,89 @@ local function gather_raycast()
 	return ray_hits, hit_count
 end
 
+function love.update(dt)
+	Runtime = Runtime + dt
+	update_scale()
+	PlayerDirX = math.cos(PlayerAngle)
+	PlayerDirY = math.sin(PlayerAngle)
+    PlayerLatX = math.cos(PlayerAngle+HalfPi)
+    PlayerLatY = math.sin(PlayerAngle+HalfPi)
+	MoveSpeedCurrent = MoveSpeedCurrent - MoveSpeedMin*0.01
+	if (MoveSpeedCurrent < MoveSpeedMin) then MoveSpeedCurrent = MoveSpeedMin end
+
+    local dir = 0.0
+    local dir_lat = 0.0
+
+	if (love.keyboard.isDown("up") or love.keyboard.isDown("w")) then
+        dir = 1.0
+    elseif (love.keyboard.isDown("down") or love.keyboard.isDown("s")) then
+		dir = -1.0
+    end
+
+	if (love.keyboard.isDown("d")) then
+        dir_lat = 1.0
+    elseif (love.keyboard.isDown("a")) then
+		dir_lat = -1.0
+    end
+
+    if (love.keyboard.isDown("left")) then
+		PlayerAngle = PlayerAngle - (Tau/100)
+		if (PlayerAngle < 0.0) then PlayerAngle = Tau end
+    elseif (love.keyboard.isDown("right")) then
+		PlayerAngle = PlayerAngle + (Tau/100)
+		if (PlayerAngle > Tau) then PlayerAngle = 0.0 end
+    end
+
+    if (dir ~= 0) then
+        move_player(dir, false)
+    end
+
+    if (dir_lat ~= 0) then
+        move_player(dir_lat, true)
+    end
+
+	RayHits, HitCount = gather_raycast()
+end
+
+local function draw_map(ray_hits, hit_count)
+	local x = MinimapOffsetX
+	local y = MinimapOffsetY
+	local scale = MinimapScale
+
+	local pwx, pwy = map_to_window(PlayerX, PlayerY)
+	pwx, pwy = pwx*scale+x, pwy*scale+y
+
+	love.graphics.setColor(0.0, 0.0, 0.0)
+	for map_x=1, MapWidth do
+		for map_y=1, MapHeight do
+			local cell = coord_to_cell(map_x, map_y)
+			local win_x, win_y = map_to_window(map_x, map_y)
+			if MapCells[cell] > 0 then
+				love.graphics.rectangle("fill", win_x*scale+x, win_y*scale+y, TileWidth*scale, TileHeight*scale)
+			end
+		end
+	end
+
+	local win_x, win_y = map_to_window(PlayerX, PlayerY)
+	love.graphics.setColor(1.0, 1.0, 1.0)
+	love.graphics.line(win_x*scale+x, win_y*scale+y, win_x*scale+(PlayerDirX*2.0*TileWidth*scale)+x, win_y*scale+(PlayerDirY*2.0*TileHeight*scale)+y)
+	win_x = win_x - TileWidth/2
+	win_y = win_y - TileHeight/2
+	love.graphics.setColor(0.8, 0.2, 0.2)
+	love.graphics.rectangle("fill", win_x*scale+x, win_y*scale+y, TileWidth*scale, TileHeight*scale)
+
+	for i = 1, hit_count do
+		win_x, win_y = map_to_window(ray_hits[i].rx, ray_hits[i].ry)
+		win_x, win_y = win_x*MinimapScale + MinimapOffsetX, win_y*MinimapScale + MinimapOffsetY
+		love.graphics.setColor(1.0, 0.0, 0.0)
+		love.graphics.line(pwx, pwy, win_x, win_y)
+		love.graphics.setColor(0.0, 1.0, 0.0)
+		win_x, win_y = map_to_window(ray_hits[i].tx, ray_hits[i].ty)
+		win_x, win_y = win_x*MinimapScale + MinimapOffsetX, win_y*MinimapScale + MinimapOffsetY
+		love.graphics.rectangle("line", win_x, win_y, TileWidth*MinimapScale, TileHeight*MinimapScale)
+	end
+end
+
 local function draw_raycast(ray_hits, hit_count)
 	local hor_h = WindowHeight * 0.4
 
@@ -374,7 +377,7 @@ local function draw_raycast(ray_hits, hit_count)
 	end
 end
 
-function draw_sprites(ray_hits, hit_count)
+local function draw_sprites(ray_hits, hit_count)
 	local plane_x = PlayerLatX
 	local plane_y = PlayerDirX
 	local sprite_x = CharX-PlayerX
@@ -386,33 +389,40 @@ function draw_sprites(ray_hits, hit_count)
 	local sprite_screen_x = math.floor((WindowWidth/2)*(1+transform_x/transform_y))
 
 	local sprite_height = math.abs(math.floor(WindowHeight/transform_y))
+    if (math.fmod(sprite_height, 2) > 0) then sprite_height = sprite_height + 1 end
 	local start_y = -sprite_height / 2 + WindowHeight * 0.4
 	if (start_y < 0) then start_y = 0 end
 	local end_y = sprite_height / 2 + WindowHeight * 0.4
 	if (end_y > WindowHeight) then end_y = WindowHeight end
 
 	local sprite_width = math.abs(math.floor(WindowWidth/transform_y))
+    if (math.fmod(sprite_width, 2) > 0) then sprite_width = sprite_width + 1 end
 	local start_x = -sprite_width / 2 + sprite_screen_x
 	if (start_x < 0) then start_x = 0 end
 	local end_x = sprite_width / 2 + sprite_screen_x
 	if (end_x > WindowWidth) then end_x = WindowWidth end
 
-	    love.graphics.setColor(1, 1, 1)
+    love.graphics.setColor(1, 1, 1)
+    local attempt_count = 0
+    local stripe_count = 0
 
 	for stripe = start_x, end_x-1 do
 		local tex_x = math.floor((stripe -(-sprite_width/2+sprite_screen_x)) * 16 / sprite_width)
-		local w_x = stripe
-		if (w_x < WindowWidth and tex_x < 16 and stripe < hit_count and stripe > 0 and transform_y > 0 and ray_hits[stripe] ~= nil and ray_hits[stripe].dist > transform_y) then
-		love.graphics.draw(CharSheets[1], CharQuads[tex_x+1], w_x, start_y, 0, sprite_width/16, sprite_height/16, 0, 0, 0, 0 )
+        attempt_count = attempt_count + 1
+		if (stripe < WindowWidth and tex_x < 16 and stripe <= hit_count and stripe >= 0 and transform_y >= 0 and ray_hits[stripe] ~= nil and ray_hits[stripe].dist >= transform_y) then
+            stripe_count = stripe_count + 1
+            love.graphics.draw(CharSheets[1], CharQuads[tex_x+1], stripe, start_y, 0, sprite_width/16, sprite_height/16, 0, 0, 0, 0 )
 		end
 	end
+
+    love.graphics.print(string.format("SPRITE STARTX %f STARTY %f WIDTH %f HEIGHT %f STRIPES %d/%d", start_x, start_y, sprite_width, sprite_height, stripe_count, attempt_count), 20, WindowHeight*0.9, 0, 1, 1)
+    love.graphics.print(string.format("HITCOUNT %d TRANSFORMX %f TRANSFORMY %f INVDET %f", hit_count, transform_x, transform_y, invDet), 20, WindowHeight*0.8, 0, 1, 1)
 end
 
 function love.draw()
-	local ray_hits, hit_count = gather_raycast()
-	draw_raycast(ray_hits, hit_count)
-	draw_sprites(ray_hits, hit_count)
-	draw_map(ray_hits, hit_count)
+	draw_raycast(RayHits, HitCount)
+	draw_sprites(RayHits, HitCount)
+	draw_map(RayHits, HitCount)
 end
 
 function love.keypressed(key, scancode, isrepeat)
