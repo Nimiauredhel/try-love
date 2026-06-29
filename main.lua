@@ -43,6 +43,7 @@ DrawMode = 0
 
 RayHits = { }
 HitCount = 0
+TopDist = 0
 
 -- Minimap --
 MinimapScale = 0.25
@@ -205,6 +206,7 @@ local function gather_raycast()
 		ray_count = math.fmod(Runtime*DrawMode*(WindowWidth / 100), RayCount)
 	end
 
+	TopDist = 0
 	local hit_count = 0
 	local ray_hits = { }
 
@@ -279,6 +281,7 @@ local function gather_raycast()
 					wall_x = wall_x - math.floor(wall_x)
 					side_px = 1+wall_x * 64
 
+					if dist > TopDist then TopDist = dist end
 					local hit_data = { index = ray, type = hit, rx = rx, ry = ry, tx = tx, ty = ty, dist = dist, side_px = side_px }
 					table.insert(ray_hits, hit_data)
 					hit_count = hit_count + 1
@@ -408,6 +411,8 @@ local function draw_sprites(ray_hits, hit_count)
     for entity = 1, EntityCount do
         local sprite_x = Entities[entity].x-PlayerX
         local sprite_y = Entities[entity].y-PlayerY
+	local sprite_dist = math.abs(sprite_x-sprite_y)
+	if (sprite_dist > TopDist) then goto continue end
 
         local transform_x = invDet * (PlayerDirY*sprite_x-PlayerDirX*sprite_y)
         local transform_y = invDet * (-plane_y*sprite_x+plane_x*sprite_y)
@@ -450,6 +455,7 @@ local function draw_sprites(ray_hits, hit_count)
                 love.graphics.draw(CharSheets[Entities[entity].sheet], CharQuads[tex_x+1], stripe, start_y, 0, final_width, final_height, 0, 0, 0, 0 )
             end
         end
+	::continue::
     end
 end
 
