@@ -403,15 +403,30 @@ local function draw_raycast(ray_hits, hit_count)
 	end
 end
 
+local function compareDistDescending(a, b)
+    return a.dist > b.dist
+end
+
 local function draw_sprites(ray_hits, hit_count)
 	local plane_x = PlayerLatX*Cone/2
 	local plane_y = PlayerDirX*Cone/2
 	local invDet = 1.0 / (plane_x*PlayerDirY-PlayerDirX*plane_y)
+    local sprites = {}
 
-    for entity = 1, EntityCount do
-        local sprite_x = Entities[entity].x-PlayerX
-        local sprite_y = Entities[entity].y-PlayerY
-	local sprite_dist = math.abs(sprite_x-sprite_y)
+    for i = 1, EntityCount do
+        local sprite_x = Entities[i].x-PlayerX
+        local sprite_y = Entities[i].y-PlayerY
+	local sprite_dist = math.abs(sprite_x+sprite_y)
+	table.insert(sprites, { sprite_x = sprite_x, sprite_y = sprite_y, dist = sprite_dist, index = i })
+    end
+
+    table.sort(sprites, compareDistDescending)
+
+    for sprite = 1, EntityCount do
+	entity = sprites[sprite].index
+        local sprite_x = sprites[sprite].sprite_x
+        local sprite_y = sprites[sprite].sprite_y
+	local sprite_dist = sprites[sprite].dist
 	if (sprite_dist > TopDist) then goto continue end
 
         local transform_x = invDet * (PlayerDirY*sprite_x-PlayerDirX*sprite_y)
