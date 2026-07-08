@@ -26,8 +26,8 @@ PlayerDirY = 0.0
 PlayerLatX = 1.0
 PlayerLatY = 0.0
 
-MoveSpeedMin = 0.1
-MoveSpeedMax = 0.75
+MoveSpeedMin = 1.0
+MoveSpeedMax = 7.5
 MoveSpeedCurrent = MoveSpeedMin
 MoveDirection = 0
 
@@ -114,8 +114,8 @@ end
 function love.load()
     love.graphics.setDefaultFilter( "nearest", "nearest", 16 )
     Runtime = 0
-	MoveSpeedMin = 0.1
-	MoveSpeedMax = 0.75
+	MoveSpeedMin = 5.0
+	MoveSpeedMax = 15.0
 	MoveSpeedCurrent = MoveSpeedMin
 	load_map()
 	update_scale(love.graphics.getDimensions())
@@ -149,7 +149,7 @@ function love.load()
 	-- load entity sprite sheets
 	table.insert(SpriteSheets, love.graphics.newImage("stella_walk.png", nil))
 
-	local sides_fix = { 1, 6, 2, 7, 4, 8, 3, 5 }
+	local sides_fix = { 4, 8, 3, 5, 1, 6, 2, 7 }
 
 	-- define sprite vertical strips as list of quads
 	for side = 0, ActorSides-1 do
@@ -163,12 +163,12 @@ function love.load()
 	-- load entity list
 	local entity_count = 6
 	local entities_to_load = {
-        { x = 8, y = 6.5, sheet = 1, x_scale = 1.0, y_scale = 1.0, y_offset = 0.0, heading = 0.0 },
-        { x = 4.5, y = 8.5, sheet = 1, x_scale = 0.5, y_scale = 0.5, y_offset = -0.5/2.0, heading = 0.0  },
-        { x = 3.5, y = 12.5, sheet = 1, x_scale = 0.5, y_scale = 0.5, y_offset = -0.5/2.0, heading = 0.0  },
-        { x = 11.5, y = 8, sheet = 1, x_scale = 1.0, y_scale = 1.0, y_offset = 0.0, heading = 0.0  },
-        { x = 11.5, y = 9, sheet = 1, x_scale = 0.5, y_scale = 0.5, y_offset = -0.5/2.0, heading = Pi*0.5  },
-        { x = 11.5, y = 10, sheet = 1, x_scale = 0.25, y_scale = 0.25, y_offset = -0.75/2.0, heading = Pi  },
+        { x = 8, y = 6.5, sheet = 1, x_scale = 0.75, y_scale = 0.75, y_offset = -0.25/2.0, heading = 0.0, speed = MoveSpeedMin },
+        { x = 4.5, y = 8.5, sheet = 1, x_scale = 0.5, y_scale = 0.5, y_offset = -0.5/2.0, heading = 0.0, speed = MoveSpeedMin  },
+        { x = 3.5, y = 12.5, sheet = 1, x_scale = 0.5, y_scale = 0.5, y_offset = -0.5/2.0, heading = 0.0, speed = MoveSpeedMin  },
+        { x = 11.5, y = 8, sheet = 1, x_scale = 0.4, y_scale = 0.4, y_offset = -0.6/2.0, heading = 0.0, speed = MoveSpeedMin  },
+        { x = 11.5, y = 9, sheet = 1, x_scale = 0.5, y_scale = 0.5, y_offset = -0.5/2.0, heading = Pi*0.5, speed = MoveSpeedMin  },
+        { x = 11.5, y = 10, sheet = 1, x_scale = 0.25, y_scale = 0.25, y_offset = -0.75/2.0, heading = Pi, speed = MoveSpeedMin  },
 	}
 	for i = 1, entity_count do
 		table.insert(Entities, entities_to_load[i])
@@ -183,12 +183,12 @@ local function map_to_window(in_x, in_y)
 end
 
 local function coord_to_cell(map_x, map_y)
-	local fmap_x, fmap_y = math.floor(map_x), math.floor(map_y)
+	local fmap_x, fmap_y = math.abs(math.floor(map_x)), math.abs(math.floor(map_y))
 	local cell = ((fmap_y-1)*MapWidth)+fmap_x
 	return cell
 end
 
-local function move_player(dir, lateral)
+local function move_player(dir, lateral, dt)
 	local dirx = PlayerDirX
 	local diry = PlayerDirY
 
@@ -197,11 +197,11 @@ local function move_player(dir, lateral)
 		diry = PlayerLatY
 	end
 
-	local move_x = dirx * MoveSpeedCurrent * dir
-	local move_y = diry * MoveSpeedCurrent * dir
+	local move_x = dirx * MoveSpeedCurrent * dir * dt
+	local move_y = diry * MoveSpeedCurrent * dir * dt
 
 	if (dir == MoveDirection) then
-		MoveSpeedCurrent = MoveSpeedCurrent + MoveSpeedMin * 20
+		MoveSpeedCurrent = MoveSpeedCurrent + MoveSpeedMin
 	else
 		MoveSpeedCurrent = MoveSpeedMin
 	end
@@ -219,6 +219,31 @@ local function move_player(dir, lateral)
 		then
 		PlayerX, PlayerY = PlayerX - move_x, PlayerY - move_y
 		MoveSpeedCurrent = MoveSpeedMin
+	end
+end
+
+local function move_actor(actor, dt)
+	local dirx = math.cos(actor.heading)
+	local diry = math.sin(actor.heading)
+
+	local move_x = dirx * actor.speed * dt * actor.y_scale * 0.1
+	local move_y = diry * actor.speed * dt * actor.y_scale * 0.1
+
+	actor.x, actor.y = actor.x + move_x, actor.y + move_y
+	if (actor.x > MapWidth) or (actor.x < 0) or (actor.y > MapHeight) or (actor.y < 0)
+		or MapCells[coord_to_cell(actor.x+PlayerBounds, actor.y+PlayerBounds)] > 0
+		or MapCells[coord_to_cell(actor.x-PlayerBounds, actor.y+PlayerBounds)] > 0
+		or MapCells[coord_to_cell(actor.x+PlayerBounds, actor.y-PlayerBounds)] > 0
+		or MapCells[coord_to_cell(actor.x-PlayerBounds, actor.y-PlayerBounds)] > 0
+		then
+		actor.x, actor.y = actor.x - move_x, actor.y - move_y
+		actor.heading = actor.heading + (math.random()*Tau)
+		actor.speed = MoveSpeedMin
+		if (actor.heading > Tau) then actor.heading = actor.heading - Tau
+		elseif (actor.heading < 0.0) then actor.heading = actor.heading + Tau end
+	else
+		actor.speed = actor.speed + MoveSpeedMin
+		if (actor.speed > MoveSpeedMax) then actor.speed = MoveSpeedMax end
 	end
 end
 
@@ -326,7 +351,6 @@ function love.update(dt)
 	PlayerDirY = math.sin(PlayerAngle)
 	PlayerLatX = math.cos(PlayerAngle+HalfPi)
 	PlayerLatY = math.sin(PlayerAngle+HalfPi)
-	MoveSpeedCurrent = MoveSpeedCurrent - MoveSpeedMin*0.01
 	if (MoveSpeedCurrent < MoveSpeedMin) then MoveSpeedCurrent = MoveSpeedMin end
 
 	local dir = 0.0
@@ -345,19 +369,27 @@ function love.update(dt)
 	end
 
 	if (love.keyboard.isDown("left")) then
-		PlayerAngle = PlayerAngle - (Tau/100)
+		PlayerAngle = PlayerAngle - Tau*dt*0.6
 		if (PlayerAngle < 0.0) then PlayerAngle = Tau end
 	elseif (love.keyboard.isDown("right")) then
-		PlayerAngle = PlayerAngle + (Tau/100)
+		PlayerAngle = PlayerAngle + Tau*dt*0.6
 		if (PlayerAngle > Tau) then PlayerAngle = 0.0 end
 	end
 
 	if (dir ~= 0) then
-		move_player(dir, false)
+		move_player(dir, false, dt)
 	end
 
 	if (dir_lat ~= 0) then
-		move_player(dir_lat, true)
+		move_player(dir_lat, true, dt)
+	end
+
+	if (dir+dir_lat == 0) then
+		MoveSpeedCurrent = MoveSpeedCurrent - MoveSpeedMin*0.01
+	end
+
+	for entity = 1, EntityCount do
+		move_actor(Entities[entity], dt)
 	end
 
 	RayHits, HitCount = gather_raycast()
@@ -492,7 +524,7 @@ local function draw_sprites(ray_hits, hit_count)
 		if (final_width < 1.0) then final_width = 1.0 end
 		--if (final_height < 1.0) then final_height = 1.0 end
 
-		local sprite_side = math.floor((sprites[sprite].angle/Tau)*(ActorSides))
+		local sprite_side = math.floor((sprites[sprite].angle/Tau)*(ActorSides)) % ActorSides
 
 		for stripe = start_x, end_x-1 do
 			local tex_x = math.floor((stripe -(-sprite_width/2+sprite_screen_x)) * px_width / sprite_width)
