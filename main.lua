@@ -97,14 +97,18 @@ local function load_map()
 	}
 end
 
-local function update_scale()
-	WindowWidth, WindowHeight = love.graphics.getDimensions()
+local function update_scale(win_w, win_h)
+	WindowWidth, WindowHeight = win_w, win_h
 	HorizonY = WindowHeight * 0.4
 	TileWidth = WindowWidth / MapWidth
 	TileHeight = TileWidth
 	RayCount = WindowWidth
 	Ratio = WindowWidth/WindowHeight
 	Cone = (FieldOfView / 360.0) * Tau * Ratio
+end
+
+function love.resize(w, h)
+	update_scale(w, h)
 end
 
 function love.load()
@@ -114,7 +118,7 @@ function love.load()
 	MoveSpeedMax = 0.75
 	MoveSpeedCurrent = MoveSpeedMin
 	load_map()
-	update_scale()
+	update_scale(love.graphics.getDimensions())
 	DrawMode = 0
 
 	PlayerX, PlayerY = MapWidth/2, MapHeight/2
@@ -318,7 +322,6 @@ end
 
 function love.update(dt)
 	Runtime = Runtime + dt
-	update_scale()
 	PlayerDirX = math.cos(PlayerAngle)
 	PlayerDirY = math.sin(PlayerAngle)
 	PlayerLatX = math.cos(PlayerAngle+HalfPi)
