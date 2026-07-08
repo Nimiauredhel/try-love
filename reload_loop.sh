@@ -19,6 +19,6 @@ do
 		echo "PID is $love_pid"
 	fi
 
-	sleep 1
+	sleep 3
 
 done

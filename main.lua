@@ -53,8 +53,15 @@ MinimapOffsetY = WindowHeight * 0.025
 -- Assets --
 WallTextures = { }
 WallQuads = { }
-CharSheets = { }
-CharQuads = { }
+
+SpriteSheets = { }
+SpriteQuads = { }
+
+SpriteWidth, SpriteHeight = 16,16
+
+ActorSides = 4
+ActorFrames = 4
+AnimSpeed = 3.0
 
 local function load_map()
 	MapWidth, MapHeight = 16, 16
@@ -80,12 +87,12 @@ end
 
 local function update_scale()
 	WindowWidth, WindowHeight = love.graphics.getDimensions()
-    HorizonY = WindowHeight * 0.4
+	HorizonY = WindowHeight * 0.4
 	TileWidth = WindowWidth / MapWidth
 	TileHeight = TileWidth
-    RayCount = WindowWidth
-    Ratio = WindowWidth/WindowHeight
-    Cone = (FieldOfView / 360.0) * Tau * Ratio
+	RayCount = WindowWidth
+	Ratio = WindowWidth/WindowHeight
+	Cone = (FieldOfView / 360.0) * Tau * Ratio
 end
 
 function love.load()
@@ -119,18 +126,18 @@ function love.load()
 	table.insert(WallTextures, love.graphics.newImage("Brick07.png", nil))
 	table.insert(WallTextures, love.graphics.newImage("Brick08.png", nil))
 	-- define wall vertical strips as list of quads
-	for i = 1, 64 do
+	for i = 0, 63 do
 		table.insert(WallQuads, love.graphics.newQuad(i, 0, 1, 64, 64, 64 ))
 	end
 
 	-- load entity sprite sheets
-	table.insert(CharSheets, love.graphics.newImage("gorksprite.png", nil))
+	table.insert(SpriteSheets, love.graphics.newImage("gorksprite.png", nil))
 
 	-- define sprite vertical strips as list of quads
-	for i = 0, 3 do
-        for j = 0, 3 do
-	for stripe = 0, 15 do
-		table.insert(CharQuads, love.graphics.newQuad(16*i+stripe, 16*j, 1, 16, 64, 64 ))
+	for side = 0, ActorSides-1 do
+        for frame = 0, ActorFrames-1 do
+	for stripe = 0, SpriteWidth-1 do
+		table.insert(SpriteQuads, love.graphics.newQuad(SpriteWidth*frame+stripe, SpriteHeight*side, 1, SpriteHeight, SpriteWidth*ActorFrames, SpriteHeight*ActorSides))
 	end
         end
 	end
@@ -415,6 +422,8 @@ local function draw_sprites(ray_hits, hit_count)
 	local invDet = 1.0 / (plane_x*PlayerDirY-PlayerDirX*plane_y)
 	local sprites = {}
 
+	curr_frame = math.floor((Runtime * AnimSpeed) % ActorFrames)
+
 	for i = 1, EntityCount do
 		local sprite_x = Entities[i].x-PlayerX
 		local sprite_y = Entities[i].y-PlayerY
@@ -452,8 +461,8 @@ local function draw_sprites(ray_hits, hit_count)
 
 		love.graphics.setColor(1, 1, 1)
 
-		local px_width = 16
-		local px_height = 16
+		local px_width = SpriteWidth
+		local px_height = SpriteHeight
 		local px_width_pow = px_width*px_width
 		local final_width, final_height = sprite_width/px_width_pow, sprite_height/px_height
 		if (final_width < 1.0) then final_width = 1.0 end
@@ -462,7 +471,7 @@ local function draw_sprites(ray_hits, hit_count)
 		for stripe = start_x, end_x-1 do
 			local tex_x = math.floor((stripe -(-sprite_width/2+sprite_screen_x)) * px_width / sprite_width)
 			if (stripe < WindowWidth-1 and tex_x < px_width and stripe < hit_count and stripe > 0 and transform_y > 0 and ray_hits[stripe] ~= nil and ray_hits[stripe].dist > transform_y) then
-				love.graphics.draw(CharSheets[Entities[entity].sheet], CharQuads[tex_x+1], stripe, start_y, 0, final_width, final_height, 0, 0, 0, 0 )
+				love.graphics.draw(SpriteSheets[Entities[entity].sheet], SpriteQuads[tex_x+1+(SpriteWidth*curr_frame)], stripe, start_y, 0, final_width, final_height, 0, 0, 0, 0 )
 			end
 		end
 		::continue::
