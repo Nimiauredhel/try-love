@@ -57,9 +57,9 @@ WallQuads = { }
 SpriteSheets = { }
 SpriteQuads = { }
 
-SpriteWidth, SpriteHeight = 16,16
+SpriteWidth, SpriteHeight = 64,64
 
-ActorSides = 4
+ActorSides = 8
 ActorFrames = 4
 AnimSpeed = 3.0
 
@@ -143,13 +143,15 @@ function love.load()
 	end
 
 	-- load entity sprite sheets
-	table.insert(SpriteSheets, love.graphics.newImage("gorksprite.png", nil))
+	table.insert(SpriteSheets, love.graphics.newImage("stella_walk.png", nil))
+
+	local sides_fix = { 1, 6, 2, 7, 4, 8, 3, 5 }
 
 	-- define sprite vertical strips as list of quads
 	for side = 0, ActorSides-1 do
         for frame = 0, ActorFrames-1 do
 	for stripe = 0, SpriteWidth-1 do
-		table.insert(SpriteQuads, love.graphics.newQuad(SpriteWidth*frame+stripe, SpriteHeight*side, 1, SpriteHeight, SpriteWidth*ActorFrames, SpriteHeight*ActorSides))
+		table.insert(SpriteQuads, love.graphics.newQuad(SpriteWidth*frame+stripe, SpriteHeight*(sides_fix[side+1]-1), 1, SpriteHeight, SpriteWidth*ActorFrames, SpriteHeight*ActorSides))
 	end
         end
 	end
@@ -457,7 +459,7 @@ local function draw_sprites(ray_hits, hit_count)
 		local sprite_x = sprites[sprite].sprite_x
 		local sprite_y = sprites[sprite].sprite_y
 		local sprite_dist = sprites[sprite].dist
-		if (sprite_dist > TopDist) then goto continue end
+		if (sprite_dist > TopDist*2) then goto continue end
 
 		local transform_x = invDet * (PlayerDirY*sprite_x-PlayerDirX*sprite_y)
 		local transform_y = invDet * (-plane_y*sprite_x+plane_x*sprite_y)
@@ -467,9 +469,9 @@ local function draw_sprites(ray_hits, hit_count)
 		local y_offset = math.ceil(Entities[entity].y_offset * sprite_height)
 		sprite_height = sprite_height * Entities[entity].y_scale
 		local start_y = -sprite_height / 2 + HorizonY - y_offset
-		if (start_y < 0) then start_y = 0 end
+		--if (start_y < 0) then start_y = 0 end
 		local end_y = sprite_height / 2 + HorizonY - y_offset
-		if (end_y > WindowHeight) then end_y = WindowHeight end
+		--if (end_y > WindowHeight) then end_y = WindowHeight end
 
 		local sprite_width = math.ceil(math.abs(math.floor(WindowWidth/transform_y)) * Entities[entity].x_scale / Ratio)
 		if (sprite_width % 2 > 0) then sprite_width = sprite_width - 1 end
@@ -485,17 +487,9 @@ local function draw_sprites(ray_hits, hit_count)
 		local px_width_pow = px_width*px_width
 		local final_width, final_height = sprite_width/px_width_pow, sprite_height/px_height
 		if (final_width < 1.0) then final_width = 1.0 end
-		if (final_height < 1.0) then final_height = 1.0 end
+		--if (final_height < 1.0) then final_height = 1.0 end
 
-		local angle_diff = sprites[sprite].angle
-		local sprite_side = math.floor((angle_diff/Tau)*(ActorSides))
-		if sprite_side == 3 then sprite_side = 2
-		elseif sprite_side == 2 then sprite_side = 3 end
-
-		if (sprites[sprite].index == 5) then
-			love.graphics.print(string.format("SPRITE ANGLE %f", angle_diff), 20, WindowHeight*0.9, 0, 2, 2)
-		end
-
+		local sprite_side = math.floor((sprites[sprite].angle/Tau)*(ActorSides))
 
 		for stripe = start_x, end_x-1 do
 			local tex_x = math.floor((stripe -(-sprite_width/2+sprite_screen_x)) * px_width / sprite_width)
