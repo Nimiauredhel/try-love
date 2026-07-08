@@ -63,6 +63,18 @@ ActorSides = 4
 ActorFrames = 4
 AnimSpeed = 3.0
 
+local function get_vec2_dot(x1, y1, x2, y2)
+	return (x1*x2)+(y1*y2)
+end
+
+local function get_vec2_mag(x, y)
+	return math.sqrt(x*x+y*y)
+end
+
+local function get_vec2_angle(x1, y1, x2, y2)
+	return (get_vec2_dot(x1, y1, x2, y2) / (get_vec2_mag(x1, y1)*get_vec2_mag(x2, y2)))
+end
+
 local function load_map()
 	MapWidth, MapHeight = 16, 16
 	MapCells = {
@@ -145,12 +157,12 @@ function love.load()
 	-- load entity list
 	local entity_count = 6
 	local entities_to_load = {
-        { x = 8, y = 6.5, sheet = 1, x_scale = 1.0, y_scale = 1.0, y_offset = 0.0 },
-        { x = 4.5, y = 8.5, sheet = 1, x_scale = 0.5, y_scale = 0.5, y_offset = -0.5/2.0 },
-        { x = 3.5, y = 12.5, sheet = 1, x_scale = 0.5, y_scale = 0.5, y_offset = -0.5/2.0 },
-        { x = 11.5, y = 8, sheet = 1, x_scale = 1.0, y_scale = 1.0, y_offset = 0.0 },
-        { x = 11.5, y = 9, sheet = 1, x_scale = 0.5, y_scale = 0.5, y_offset = -0.5/2.0 },
-        { x = 11.5, y = 10, sheet = 1, x_scale = 0.25, y_scale = 0.25, y_offset = -0.75/2.0 },
+        { x = 8, y = 6.5, sheet = 1, x_scale = 1.0, y_scale = 1.0, y_offset = 0.0, heading = 0.0 },
+        { x = 4.5, y = 8.5, sheet = 1, x_scale = 0.5, y_scale = 0.5, y_offset = -0.5/2.0, heading = 0.0  },
+        { x = 3.5, y = 12.5, sheet = 1, x_scale = 0.5, y_scale = 0.5, y_offset = -0.5/2.0, heading = 0.0  },
+        { x = 11.5, y = 8, sheet = 1, x_scale = 1.0, y_scale = 1.0, y_offset = 0.0, heading = 0.0  },
+        { x = 11.5, y = 9, sheet = 1, x_scale = 0.5, y_scale = 0.5, y_offset = -0.5/2.0, heading = Pi*0.5  },
+        { x = 11.5, y = 10, sheet = 1, x_scale = 0.25, y_scale = 0.25, y_offset = -0.75/2.0, heading = Pi  },
 	}
 	for i = 1, entity_count do
 		table.insert(Entities, entities_to_load[i])
@@ -428,7 +440,14 @@ local function draw_sprites(ray_hits, hit_count)
 		local sprite_x = Entities[i].x-PlayerX
 		local sprite_y = Entities[i].y-PlayerY
 		local sprite_dist = math.abs(sprite_x)+math.abs(sprite_y)
-		table.insert(sprites, { sprite_x = sprite_x, sprite_y = sprite_y, dist = sprite_dist, index = i })
+
+		local sprite_angle = get_vec2_angle(Entities[i].x, Entities[i].y, PlayerX, PlayerY)
+		sprite_angle = math.abs((((sprite_angle+1.0)/2.0)*Tau)-PlayerAngle)
+		sprite_angle = sprite_angle+Entities[i].heading
+		sprite_angle = sprite_angle+(Pi/4)
+		if (sprite_angle > Tau) then sprite_angle = sprite_angle - Tau end
+
+		table.insert(sprites, { sprite_x = sprite_x, sprite_y = sprite_y, dist = sprite_dist, index = i, angle = sprite_angle })
 	end
 
     table.sort(sprites, compareDistDescending)
@@ -468,10 +487,20 @@ local function draw_sprites(ray_hits, hit_count)
 		if (final_width < 1.0) then final_width = 1.0 end
 		if (final_height < 1.0) then final_height = 1.0 end
 
+		local angle_diff = sprites[sprite].angle
+		local sprite_side = math.floor((angle_diff/Tau)*(ActorSides))
+		if sprite_side == 3 then sprite_side = 2
+		elseif sprite_side == 2 then sprite_side = 3 end
+
+		if (sprites[sprite].index == 5) then
+			love.graphics.print(string.format("SPRITE ANGLE %f", angle_diff), 20, WindowHeight*0.9, 0, 2, 2)
+		end
+
+
 		for stripe = start_x, end_x-1 do
 			local tex_x = math.floor((stripe -(-sprite_width/2+sprite_screen_x)) * px_width / sprite_width)
 			if (stripe < WindowWidth-1 and tex_x < px_width and stripe < hit_count and stripe > 0 and transform_y > 0 and ray_hits[stripe] ~= nil and ray_hits[stripe].dist > transform_y) then
-				love.graphics.draw(SpriteSheets[Entities[entity].sheet], SpriteQuads[tex_x+1+(SpriteWidth*curr_frame)], stripe, start_y, 0, final_width, final_height, 0, 0, 0, 0 )
+				love.graphics.draw(SpriteSheets[Entities[entity].sheet], SpriteQuads[tex_x+1+(SpriteWidth*curr_frame)+(SpriteWidth*ActorFrames*sprite_side)], stripe, start_y, 0, final_width, final_height, 0, 0, 0, 0 )
 			end
 		end
 		::continue::
