@@ -445,16 +445,16 @@ local function draw_raycast(ray_hits, hit_count)
 	local s_w = WindowWidth/RayCount
 
 	for i = 1, hit_count do
-		local mod = 1.0 - (ray_hits[i].dist/10)
+		local mod = 1.0 - (ray_hits[i].dist/6)
 
 		if (mod < 0.0) then
 			mod = 0.0
 		end
 
-		local r_mod = 0.4 * mod
-		local g_mod = 0.3 * mod
+		local r_mod = 0.5 * mod
+		local g_mod = 0.4 * mod
 		local b_mod = 0.1 * mod
-		love.graphics.setColor(0.5 + r_mod, 0.6 + g_mod, 0.8 + b_mod)
+		love.graphics.setColor(0.5 + r_mod, 0.6 + g_mod, 0.9 + b_mod)
 		local s_h = (WindowHeight / ray_hits[i].dist)
 		local start_x = s_w * (ray_hits[i].index-1)
 		love.graphics.draw(WallTextures[ray_hits[i].type], WallQuads[math.floor(ray_hits[i].side_px)], start_x, HorizonY-(s_h*0.5), 0, s_w, s_h/64, 0, 0, 0, 0 )
@@ -515,7 +515,16 @@ local function draw_sprites(ray_hits, hit_count)
 		local end_x = sprite_width / 2 + sprite_screen_x
 		if (end_x > WindowWidth) then end_x = WindowWidth end
 
-		love.graphics.setColor(1, 1, 1)
+		local mod = 1.0 - (sprite_dist/6)
+
+		if (mod < 0.0) then
+			mod = 0.0
+		end
+
+		local r_mod = 0.5 * mod
+		local g_mod = 0.4 * mod
+		local b_mod = 0.1 * mod
+		love.graphics.setColor(0.5 + r_mod, 0.6 + g_mod, 0.9 + b_mod)
 
 		local px_width = SpriteWidth
 		local px_height = SpriteHeight
