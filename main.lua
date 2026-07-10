@@ -1,3 +1,5 @@
+require "gradient"
+
 -- Constants --
 Tau = 6.283185
 Pi = 3.14159
@@ -435,26 +437,40 @@ local function draw_map(ray_hits, hit_count)
 end
 
 local function draw_constants()
-	love.graphics.setColor(0.5, 0.5, 0.5)
-	love.graphics.rectangle("fill", 0, 0, WindowWidth, HorizonY)
-	love.graphics.setColor(0.25, 0.25, 0.25)
-	love.graphics.rectangle("fill", 0, HorizonY, WindowWidth, WindowHeight)
+	local ceil_color = { 0.45, 0.4, 0.4 }
+	local floor_color = { 0.4, 0.45, 0.4 }
+	local horizon_color = { 0.075, 0.1, 0.15 }
+	local under_horizon = WindowHeight-HorizonY
+
+	love.gradient.draw(
+		function()
+			love.graphics.rectangle("fill", 0, 0, WindowWidth, HorizonY)
+		end, "vertical",
+		WindowWidth/2,  HorizonY/2, WindowWidth/2, HorizonY/2, ceil_color, horizon_color)
+
+	love.gradient.draw(
+		function()
+			love.graphics.rectangle("fill", 0, HorizonY, WindowWidth, under_horizon)
+		end, "vertical",
+		WindowWidth/2,  HorizonY+(under_horizon/2), WindowWidth/2, under_horizon/2, horizon_color, floor_color)
+
 end
 
 local function draw_raycast(ray_hits, hit_count)
 	local s_w = WindowWidth/RayCount
 
 	for i = 1, hit_count do
-		local mod = 1.0 - (ray_hits[i].dist/6)
+		local base_dist = ray_hits[i].dist
+		local mod = 1.0 - (((math.floor(base_dist*4)+0.5)/4)/8)
 
 		if (mod < 0.0) then
 			mod = 0.0
 		end
 
-		local r_mod = 0.5 * mod
-		local g_mod = 0.4 * mod
+		local r_mod = 0.6 * mod
+		local g_mod = 0.6 * mod
 		local b_mod = 0.1 * mod
-		love.graphics.setColor(0.5 + r_mod, 0.6 + g_mod, 0.9 + b_mod)
+		love.graphics.setColor(0.4 + r_mod, 0.4 + g_mod, 0.9 + b_mod)
 		local s_h = (WindowHeight / ray_hits[i].dist)
 		local start_x = s_w * (ray_hits[i].index-1)
 		love.graphics.draw(WallTextures[ray_hits[i].type], WallQuads[math.floor(ray_hits[i].side_px)], start_x, HorizonY-(s_h*0.5), 0, s_w, s_h/64, 0, 0, 0, 0 )
@@ -515,16 +531,17 @@ local function draw_sprites(ray_hits, hit_count)
 		local end_x = sprite_width / 2 + sprite_screen_x
 		if (end_x > WindowWidth) then end_x = WindowWidth end
 
-		local mod = 1.0 - (sprite_dist/6)
+		local base_dist = sprite_dist;
+		local mod = 1.0 - (((math.floor(base_dist*4)+0.5)/4)/8)
 
 		if (mod < 0.0) then
 			mod = 0.0
 		end
 
-		local r_mod = 0.5 * mod
-		local g_mod = 0.4 * mod
+		local r_mod = 0.6 * mod
+		local g_mod = 0.6 * mod
 		local b_mod = 0.1 * mod
-		love.graphics.setColor(0.5 + r_mod, 0.6 + g_mod, 0.9 + b_mod)
+		love.graphics.setColor(0.4 + r_mod, 0.4 + g_mod, 0.9 + b_mod)
 
 		local px_width = SpriteWidth
 		local px_height = SpriteHeight

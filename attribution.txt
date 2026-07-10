@@ -1,1 +1,3 @@
-stella_walk.png is by "Wind astella" from opengameart.org
+stella_walk.png iby "Wind astella" taken from opengameart.org
+
+love.gradient by HugoBDesigner taken from github.com and modified
