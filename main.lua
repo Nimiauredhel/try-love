@@ -364,6 +364,12 @@ function love.update(dt)
 		dir = -1.0
 	end
 
+	if (love.keyboard.isDown("5")) then
+		HorizonY = HorizonY - 1000.0 * dt
+	elseif (love.keyboard.isDown("6")) then
+		HorizonY = HorizonY + 1000.0 * dt
+	end
+
 	if (love.keyboard.isDown("d")) then
         dir_lat = 1.0
 	elseif (love.keyboard.isDown("a")) then
@@ -488,6 +494,9 @@ local function draw_sprites(ray_hits, hit_count)
 	local sprites = {}
 
 	curr_frame = math.floor((Runtime * AnimSpeed) % ActorFrames)
+
+	bob_dir = ((Runtime * AnimSpeed) % 2)-1
+	HorizonY = HorizonY + bob_dir * 0.2
 
 	for i = 1, EntityCount do
 		local sprite_x = Entities[i].x-PlayerX
