@@ -38,13 +38,17 @@ EntityCount = 0
 Entities = { }
 
 -- Drawing --
-FieldOfView = 55.0
+FieldOfView = 40.0
 Ratio = WindowWidth/WindowHeight
 Cone = (FieldOfView / 360.0) * Tau * Ratio
+PlaneX = PlayerLatX*Cone/2
+PlaneY = PlayerDirX*Cone/2
 DrawMode = 0
 
-RayHits = { }
-HitCount = 0
+RayFloorHits = { }
+RayFloorHitCount = 0
+RayWallHits = { }
+RayWallHitCount = 0
 TopDist = 0
 
 -- Minimap --
@@ -56,9 +60,13 @@ MinimapOffsetY = WindowHeight * 0.025
 WallTextures = { }
 WallQuads = { }
 
+TileTextures = { }
+
 SpriteSheets = { }
 SpriteQuads = { }
 
+WallTextureWidth, WallTextureHeight = 64, 64
+TileTextureWidth, TileTextureHeight = 64, 64
 SpriteWidth, SpriteHeight = 64,64
 
 ActorSides = 8
@@ -104,7 +112,7 @@ local function update_scale(win_w, win_h)
 	HorizonY = WindowHeight * 0.4
 	TileWidth = WindowWidth / MapWidth
 	TileHeight = TileWidth
-	RayCount = WindowWidth
+	WallRayCount = WindowWidth
 	Ratio = WindowWidth/WindowHeight
 	Cone = (FieldOfView / 360.0) * Tau * Ratio
 end
@@ -134,6 +142,10 @@ function love.load()
 	MinimapOffsetX = WindowWidth * 0.025
 	MinimapOffsetY = WindowHeight * 0.025
 
+    -- load tile textures
+	table.insert(TileTextures, love.graphics.newImage("Brick01.png", nil))
+	table.insert(TileTextures, love.graphics.newImage("Brick07.png", nil))
+
     -- load wall textures
 	table.insert(WallTextures, love.graphics.newImage("Brick01.png", nil))
 	table.insert(WallTextures, love.graphics.newImage("Brick02.png", nil))
@@ -145,7 +157,7 @@ function love.load()
 	table.insert(WallTextures, love.graphics.newImage("Brick08.png", nil))
 	-- define wall vertical strips as list of quads
 	for i = 0, 63 do
-		table.insert(WallQuads, love.graphics.newQuad(i, 0, 1, 64, 64, 64 ))
+		table.insert(WallQuads, love.graphics.newQuad(i, 0, 1, WallTextureHeight, WallTextureWidth, WallTextureHeight ))
 	end
 
 	-- load entity sprite sheets
@@ -249,21 +261,25 @@ local function move_actor(actor, dt)
 	end
 end
 
-local function gather_raycast()
+local function gather_rays()
 	local dof_max = 32
-	local ray_inc = Cone / RayCount
+	local ray_inc = Cone / WallRayCount
 	local ray_angle = PlayerAngle - Cone/2
 
-	local ray_count = RayCount
+	TopDist = 0
+	local ray_floor_hit_count = 0
+	local ray_floor_hits = { }
+	local ray_wall_hit_count = 0
+	local ray_wall_hits = { }
+
+	local ray_count = WallRayCount
 
 	if (DrawMode > 0) then
-		ray_count = math.fmod(Runtime*DrawMode*(WindowWidth / 100), RayCount)
+		ray_count = math.fmod(Runtime*DrawMode*(WindowWidth / 100), WallRayCount)
 	end
 
-	TopDist = 0
-	local hit_count = 0
-	local ray_hits = { }
 
+	-- cast walls
 	for ray=1, ray_count do
 		if (ray_angle < 0.0) then ray_angle = ray_angle + Tau
 		elseif (ray_angle > Tau) then ray_angle = ray_angle - Tau end
@@ -320,7 +336,7 @@ local function gather_raycast()
 					else
 						dist = y_side - y_delta
 					end
-					side_px = 1+((dist-math.floor(dist))*64)
+					side_px = 1+((dist-math.floor(dist))*WallTextureWidth)
 
 					if (dist < 0.001) then dist = 0.001 end
 
@@ -333,26 +349,64 @@ local function gather_raycast()
 						wall_x = rx
 					end
 					wall_x = wall_x - math.floor(wall_x)
-					side_px = 1+wall_x * 64
+					side_px = 1+wall_x * WallTextureWidth
 
 					if dist > TopDist then TopDist = dist end
 					local hit_data = { index = ray, type = hit, rx = rx, ry = ry, tx = tx, ty = ty, dist = dist, side_px = side_px }
-					table.insert(ray_hits, hit_data)
-					hit_count = hit_count + 1
+					table.insert(ray_wall_hits, hit_data)
+					ray_wall_hit_count = ray_wall_hit_count + 1
 				end
 			end
 		end
 	ray_angle = ray_angle + ray_inc
 	end
-	return ray_hits, hit_count
+
+	-- cast floors/ceilings
+	local tile_ray_count = WindowHeight
+	--local tile_ray_count = WindowHeight-HorizonY
+	--if (HorizonY > tile_ray_count) then tile_ray_count = HorizonY end
+	ray_count = tile_ray_count
+
+	if (DrawMode > 0) then
+		ray_count = math.fmod(Runtime*DrawMode*(tile_ray_count / 100), tile_ray_count)
+	end
+
+	local ray_dir_x0 = PlayerDirX-PlaneX
+	local ray_dir_y0 = PlayerDirY-PlaneY
+	local ray_dir_x1 = PlayerDirX+PlaneX
+	local ray_dir_y1 = PlayerDirY+PlaneY
+
+	for y = 0, ray_count do
+		h_offset = y - HorizonY
+		pos_z = WindowHeight/2
+		row_distance = pos_z / h_offset
+
+		floor_step_x = row_distance * (ray_dir_x1 - ray_dir_x0) / WindowWidth
+		floor_step_y = row_distance * (ray_dir_y1 - ray_dir_y0) / WindowHeight
+
+		floor_x = PlayerX + row_distance * ray_dir_x0
+		floor_y = PlayerY + row_distance * ray_dir_y0
+
+		local hit_data = { x = floor_x, y = floor_y, step_x = floor_step_x, step_y = floor_step_y }
+		table.insert(ray_floor_hits, hit_data)
+		ray_floor_hit_count = ray_floor_hit_count + 1
+	end
+
+	return ray_floor_hits, ray_floor_hit_count, ray_wall_hits, ray_wall_hit_count
 end
 
-function love.update(dt)
-	Runtime = Runtime + dt
+local function update_player_orientation()
 	PlayerDirX = math.cos(PlayerAngle)
 	PlayerDirY = math.sin(PlayerAngle)
 	PlayerLatX = math.cos(PlayerAngle+HalfPi)
 	PlayerLatY = math.sin(PlayerAngle+HalfPi)
+	PlaneX = PlayerLatX*Cone/2
+	PlaneY = PlayerDirX*Cone/2
+end
+
+function love.update(dt)
+	Runtime = Runtime + dt
+
 	if (MoveSpeedCurrent < MoveSpeedMin) then MoveSpeedCurrent = MoveSpeedMin end
 
 	local dir = 0.0
@@ -400,10 +454,12 @@ function love.update(dt)
 		move_actor(Entities[entity], dt)
 	end
 
-	RayHits, HitCount = gather_raycast()
+	update_player_orientation()
+
+	RayFloorHits, RayFloorHitCount, RayWallHits, RayWallHitCount = gather_rays()
 end
 
-local function draw_map(ray_hits, hit_count)
+local function draw_map(ray_wall_hits, ray_wall_hit_count)
 	local x = MinimapOffsetX
 	local y = MinimapOffsetY
 	local scale = MinimapScale
@@ -430,13 +486,13 @@ local function draw_map(ray_hits, hit_count)
 	love.graphics.setColor(0.8, 0.2, 0.2)
 	love.graphics.rectangle("fill", win_x*scale+x, win_y*scale+y, TileWidth*scale, TileHeight*scale)
 
-	for i = 1, hit_count do
-		win_x, win_y = map_to_window(ray_hits[i].rx, ray_hits[i].ry)
+	for i = 1, ray_wall_hit_count do
+		win_x, win_y = map_to_window(ray_wall_hits[i].rx, ray_wall_hits[i].ry)
 		win_x, win_y = win_x*MinimapScale + MinimapOffsetX, win_y*MinimapScale + MinimapOffsetY
 		love.graphics.setColor(1.0, 0.0, 0.0)
 		love.graphics.line(pwx, pwy, win_x, win_y)
 		love.graphics.setColor(0.0, 1.0, 0.0)
-		win_x, win_y = map_to_window(ray_hits[i].tx, ray_hits[i].ty)
+		win_x, win_y = map_to_window(ray_wall_hits[i].tx, ray_wall_hits[i].ty)
 		win_x, win_y = win_x*MinimapScale + MinimapOffsetX, win_y*MinimapScale + MinimapOffsetY
 		love.graphics.rectangle("line", win_x, win_y, TileWidth*MinimapScale, TileHeight*MinimapScale)
 	end
@@ -462,11 +518,44 @@ local function draw_constants()
 
 end
 
-local function draw_raycast(ray_hits, hit_count)
-	local s_w = WindowWidth/RayCount
+local function draw_tiles(hits, hit_count)
+	local batch_size = 4
+	local horizon_color = { 0.075, 0.1, 0.15 }
 
-	for i = 1, hit_count do
-		local base_dist = ray_hits[i].dist
+	for i = 1, hit_count, batch_size do
+		floor_x = hits[i].x
+		floor_y = hits[i].y
+		step_x = hits[i].step_x
+		step_y = hits[i].step_y
+
+		for x = 0, WindowWidth, batch_size do
+			cell_x = math.floor(floor_x)
+			cell_y = math.floor(floor_y)
+			tex_x = math.floor(TileTextureWidth * (floor_x - cell_x))
+			tex_y = math.floor(TileTextureHeight * (floor_y - cell_y))
+			floor_x = floor_x + step_x*batch_size
+			floor_y = floor_y + step_y*batch_size
+			local quad = love.graphics.newQuad(tex_x, tex_y, batch_size, batch_size, TileTextureWidth, TileTextureHeight)
+			if i > HorizonY then
+				local mod = (i-HorizonY)/(WindowHeight-HorizonY)
+				love.graphics.setColor(0.075 + mod, 0.1 + mod, 0.15 + mod)
+				love.graphics.draw(TileTextures[2], quad, x, i, 0, batch_size, batch_size, 0, 0, 0, 0 )
+			end
+			if i < HorizonY then
+				local mod = 1.0-(i/HorizonY)
+				love.graphics.setColor(0.075 + mod, 0.1 + mod, 0.15 + mod)
+				love.graphics.draw(TileTextures[1], quad, x, i, 0, batch_size, batch_size, 0, 0, 0, 0 )
+			end
+
+		end
+	end
+end
+
+local function draw_raycast(ray_wall_hits, ray_wall_hit_count)
+	local s_w = WindowWidth/WallRayCount
+
+	for i = 1, ray_wall_hit_count do
+		local base_dist = ray_wall_hits[i].dist
 		local mod = 1.0 - (((math.floor(base_dist*4)+0.5)/4)/8)
 
 		if (mod < 0.0) then
@@ -477,9 +566,9 @@ local function draw_raycast(ray_hits, hit_count)
 		local g_mod = 0.6 * mod
 		local b_mod = 0.1 * mod
 		love.graphics.setColor(0.4 + r_mod, 0.4 + g_mod, 0.9 + b_mod)
-		local s_h = (WindowHeight / ray_hits[i].dist)
-		local start_x = s_w * (ray_hits[i].index-1)
-		love.graphics.draw(WallTextures[ray_hits[i].type], WallQuads[math.floor(ray_hits[i].side_px)], start_x, HorizonY-(s_h*0.5), 0, s_w, s_h/64, 0, 0, 0, 0 )
+		local s_h = (WindowHeight / ray_wall_hits[i].dist)
+		local start_x = s_w * (ray_wall_hits[i].index-1)
+		love.graphics.draw(WallTextures[ray_wall_hits[i].type], WallQuads[math.floor(ray_wall_hits[i].side_px)], start_x, HorizonY-(s_h*0.5), 0, s_w, s_h/WallTextureHeight, 0, 0, 0, 0 )
 	end
 end
 
@@ -487,10 +576,8 @@ local function compareDistDescending(a, b)
 	return a.dist > b.dist
 end
 
-local function draw_sprites(ray_hits, hit_count)
-	local plane_x = PlayerLatX*Cone/2
-	local plane_y = PlayerDirX*Cone/2
-	local invDet = 1.0 / (plane_x*PlayerDirY-PlayerDirX*plane_y)
+local function draw_sprites(ray_wall_hits, ray_wall_hit_count)
+	local invDet = 1.0 / (PlaneX*PlayerDirY-PlayerDirX*PlaneY)
 	local sprites = {}
 
 	curr_frame = math.floor((Runtime * AnimSpeed) % ActorFrames)
@@ -522,7 +609,7 @@ local function draw_sprites(ray_hits, hit_count)
 		if (sprite_dist > TopDist*2) then goto continue end
 
 		local transform_x = invDet * (PlayerDirY*sprite_x-PlayerDirX*sprite_y)
-		local transform_y = invDet * (-plane_y*sprite_x+plane_x*sprite_y)
+		local transform_y = invDet * (-PlaneY*sprite_x+PlaneX*sprite_y)
 		local sprite_screen_x = math.ceil((WindowWidth/2.0)*(1.0+transform_x/transform_y))
 
 		local sprite_height = math.ceil(math.abs(math.floor(WindowHeight/transform_y)))
@@ -563,7 +650,7 @@ local function draw_sprites(ray_hits, hit_count)
 
 		for stripe = start_x, end_x-1 do
 			local tex_x = math.floor((stripe -(-sprite_width/2+sprite_screen_x)) * px_width / sprite_width)
-			if (stripe < WindowWidth-1 and tex_x < px_width and stripe < hit_count and stripe > 0 and transform_y > 0 and ray_hits[stripe] ~= nil and ray_hits[stripe].dist > transform_y) then
+			if (stripe < WindowWidth-1 and tex_x < px_width and stripe < ray_wall_hit_count and stripe > 0 and transform_y > 0 and ray_wall_hits[stripe] ~= nil and ray_wall_hits[stripe].dist > transform_y) then
 				love.graphics.draw(SpriteSheets[Entities[entity].sheet], SpriteQuads[tex_x+1+(SpriteWidth*curr_frame)+(SpriteWidth*ActorFrames*sprite_side)], stripe, start_y, 0, final_width, final_height, 0, 0, 0, 0 )
 			end
 		end
@@ -572,10 +659,11 @@ local function draw_sprites(ray_hits, hit_count)
 end
 
 function love.draw()
-	draw_constants()
-	draw_raycast(RayHits, HitCount)
-	draw_sprites(RayHits, HitCount)
-	draw_map(RayHits, HitCount)
+	--draw_constants()
+	draw_tiles(RayFloorHits, RayFloorHitCount)
+	draw_raycast(RayWallHits, RayWallHitCount)
+	draw_sprites(RayWallHits, RayWallHitCount)
+	draw_map(RayWallHits, RayWallHitCount)
 end
 
 function love.keypressed(key, scancode, isrepeat)
