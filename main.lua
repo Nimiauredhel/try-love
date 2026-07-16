@@ -355,7 +355,7 @@ local function gather_rays()
 					side_px = 1+wall_x * WallTextureWidth
 
 					if dist > TopDist then TopDist = dist end
-					local hit_data = { index = ray, type = hit, rx = rx, ry = ry, tx = tx, ty = ty, dist = dist, side_px = side_px }
+					local hit_data = { index = ray, type = hit, rx = rx, ry = ry, tx = tx, ty = ty, dist = dist, side_px = side_px, start_y = HorizonY, end_y = HorizonY }
 					table.insert(ray_wall_hits, hit_data)
 					ray_wall_hit_count = ray_wall_hit_count + 1
 				end
@@ -491,7 +491,7 @@ local function draw_constants()
 
 end
 
-local function draw_tiles()
+local function draw_tiles(ray_wall_hits, ray_wall_hit_count)
 	local batch_size = 4
 	local horizon_color = { 0.075, 0.1, 0.15 }
 
@@ -526,7 +526,7 @@ local function draw_tiles()
 
 		local cell_x, cell_y, tex_x, tex_y, tex_q = 0
 
-		for x = 0, WindowWidth, batch_size do
+		for x = 1, ray_wall_hit_count, batch_size do
 			cell_x, tex_x = math.modf(floor_x)
 			cell_y, tex_y = math.modf(floor_y)
 			tex_x = math.floor(tex_x * TileTextureWidth)
@@ -536,14 +536,16 @@ local function draw_tiles()
 			if (quad == nil) then quad = TileQuads[1] end
 
 			if (y > 0 and y < WindowHeight) then
-				if y > HorizonY then
-					local mod = (h_offset)/(WindowHeight-HorizonY)
-					love.graphics.setColor(0.075 + mod, 0.1 + mod, 0.15 + mod)
-					love.graphics.draw(TileTextures[2], quad, x, y, 0, batch_size, 1, 0, 0, 0, 0 )
-				else
-					local mod = 1.0-(y/HorizonY)
-					love.graphics.setColor(0.075 + mod, 0.1 + mod, 0.15 + mod)
-					love.graphics.draw(TileTextures[1], quad, x, y, 0, batch_size, 1, 0, 0, 0, 0 )
+				if (y < ray_wall_hits[x].start_y or y > ray_wall_hits[x].end_y) then
+					if y > HorizonY then
+						local mod = (h_offset)/(WindowHeight-HorizonY)
+						love.graphics.setColor(0.075 + mod, 0.1 + mod, 0.15 + mod)
+						love.graphics.draw(TileTextures[2], quad, x, y, 0, batch_size, 1, 0, 0, 0, 0 )
+					else
+						local mod = 1.0-(y/HorizonY)
+						love.graphics.setColor(0.075 + mod, 0.1 + mod, 0.15 + mod)
+						love.graphics.draw(TileTextures[1], quad, x, y, 0, batch_size, 1, 0, 0, 0, 0 )
+					end
 				end
 				floor_x = floor_x + floor_step_x*batch_size
 				floor_y = floor_y + floor_step_y*batch_size
@@ -569,7 +571,11 @@ local function draw_raycast(ray_wall_hits, ray_wall_hit_count)
 		love.graphics.setColor(0.4 + r_mod, 0.4 + g_mod, 0.9 + b_mod)
 		local s_h = (WindowHeight / ray_wall_hits[i].dist)
 		local start_x = s_w * (ray_wall_hits[i].index-1)
-		love.graphics.draw(WallTextures[ray_wall_hits[i].type], WallQuads[math.floor(ray_wall_hits[i].side_px)], start_x, HorizonY-(s_h*0.5), 0, s_w, s_h/WallTextureHeight, 0, 0, 0, 0 )
+		local start_y = HorizonY-(s_h*0.5)
+		local end_y = start_y+s_h
+		ray_wall_hits[i].start_y = start_y
+		ray_wall_hits[i].end_y = end_y
+		love.graphics.draw(WallTextures[ray_wall_hits[i].type], WallQuads[math.floor(ray_wall_hits[i].side_px)], start_x, start_y, 0, s_w, s_h/WallTextureHeight, 0, 0, 0, 0 )
 	end
 end
 
@@ -661,8 +667,8 @@ end
 
 function love.draw()
 	--draw_constants()
-	draw_tiles()
 	draw_raycast(RayWallHits, RayWallHitCount)
+	draw_tiles(RayWallHits, RayWallHitCount)
 	draw_sprites(RayWallHits, RayWallHitCount)
 	draw_map(RayWallHits, RayWallHitCount)
 end
