@@ -410,10 +410,10 @@ function love.update(dt)
 	end
 
 	if (love.keyboard.isDown("left")) then
-		PlayerAngle = PlayerAngle - Tau*dt*0.6
+		PlayerAngle = PlayerAngle - Tau*dt*0.25
 		if (PlayerAngle < 0.0) then PlayerAngle = Tau end
 	elseif (love.keyboard.isDown("right")) then
-		PlayerAngle = PlayerAngle + Tau*dt*0.6
+		PlayerAngle = PlayerAngle + Tau*dt*0.25
 		if (PlayerAngle > Tau) then PlayerAngle = 0.0 end
 	end
 
@@ -523,10 +523,10 @@ local function draw_tiles(ray_wall_hits, ray_wall_hit_count)
     local floor_row = HorizonY+1
     local ceiling_row = HorizonY-1
 
-	for y = 1, ray_count do
+	for y = 1, ray_count, batch_size do
 		local row_distance = pos_z / y
-        floor_row = floor_row+1
-        ceiling_row = ceiling_row-1
+        floor_row = floor_row+batch_size
+        ceiling_row = ceiling_row-batch_size
 
 		local floor_step_x = row_distance * (ray_dir_x_diff)
 		local floor_step_y = row_distance * (ray_dir_y_diff)
@@ -548,13 +548,13 @@ local function draw_tiles(ray_wall_hits, ray_wall_hit_count)
 				if (floor_row < WindowHeight and floor_row > ray_wall_hits[x].end_y) then
                     local mod = y/(WindowHeight-HorizonY)
                     love.graphics.setColor(horizon_color.r + mod * horizon_rem.r, horizon_color.g + mod * horizon_rem.r, horizon_color.g + mod * horizon_rem.b)
-                    love.graphics.draw(TileTextures[2], quad, x, floor_row, 0, 1, 1, 0, 0, 0, 0 )
+                    love.graphics.draw(TileTextures[2], quad, x, floor_row, 0, batch_size, batch_size, 0, 0, 0, 0 )
                 end
 
                 if (ceiling_row > 0 and ceiling_row < ray_wall_hits[x].start_y) then
                     local mod = 1.0-(ceiling_row/HorizonY)
                     love.graphics.setColor(horizon_color.r + mod * horizon_rem.r, horizon_color.g + mod * horizon_rem.r, horizon_color.g + mod * horizon_rem.b)
-                    love.graphics.draw(TileTextures[1], quad, x, ceiling_row, 0, 1, 1, 0, 0, 0, 0 )
+                    love.graphics.draw(TileTextures[1], quad, x, ceiling_row, 0, batch_size, batch_size, 0, 0, 0, 0 )
 				end
 			end
             floor_x = floor_x + floor_step_x*batch_size
